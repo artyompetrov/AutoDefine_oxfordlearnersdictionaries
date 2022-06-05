@@ -1,21 +1,9 @@
 {
-  "1 required": {
-    "MERRIAM_WEBSTER_API_KEY": "YOUR_KEY_HERE"
-  },
-  "2 extra": {
-    "DEDICATED_INDIVIDUAL_BUTTONS": false,
+  "1 params": {
     "DEFINITION_FIELD": 1,
-    "IGNORE_ARCHAIC": true,
-    "MERRIAM_WEBSTER_MEDICAL_API_KEY": "YOUR_KEY_HERE",
-    "OPEN_IMAGES_IN_BROWSER": false,
-    "PREFERRED_DICTIONARY": "COLLEGIATE",
-    "PRONUNCIATION_FIELD": 0,
-    "PHONETIC_TRANSCRIPTION_FIELD": -1
+    "OPEN_IMAGES_IN_BROWSER": false
   },
-  "3 shortcuts": {
-    "1 PRIMARY_SHORTCUT": "ctrl+alt+e",
-    "2 DEFINE_ONLY_SHORTCUT": "",
-    "3 PRONOUNCE_ONLY_SHORTCUT": "",
-    "4 PHONETIC_TRANSCRIPTION_ONLY_SHORTCUT": ""
+  "2 shortcuts": {
+    "1 PRIMARY_SHORTCUT": "ctrl+alt+e"
   }
 }
