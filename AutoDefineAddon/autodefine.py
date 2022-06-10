@@ -44,7 +44,8 @@ PRIMARY_SHORTCUT = "ctrl+alt+e"
 
 PART_OF_SPEECH_ABBREVIATION = {"verb": "v.", "noun": "n.", "adverb": "adv.", "adjective": "adj."}
 
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
 
 
 def get_definition(editor):
@@ -53,8 +54,6 @@ def get_definition(editor):
 
 def validate_settings():
     pass
-
-
 
 
 def _focus_zero_field(editor):
@@ -101,21 +100,23 @@ def _get_definition(editor):
 
 def get_articles_list(word):
     word.replace(' ', '-')
-    url = f'https://www.oxfordlearnersdictionaries.com/search/{CORPUS}/?q={word}'
+    url = f'https://www.oxfordlearnersdictionaries.com/definition/{CORPUS}/{word}'
     response = requests.get(url, headers=HEADERS)
     data = response.content
     soup = BeautifulSoup(data, 'html.parser')
     result_link = response.url
     results = set()
 
-    if soup.find_all('span', {"class": "def"}):
-        header = soup.find('div', {"class": "webtop-g"})
-        word = header.find('h2', {"class": "h"}).get_text()
-        word_type = header.find('span', {"class": "pos"}).get_text()
-        results.add(json.dumps({'word': word, 'word_type': word_type, 'link': result_link}))
+    results.add(json.dumps({'word': word, 'word_type': 'word_type', 'link': result_link}))
 
-    #related_entries = soup.find('div', {"id": "relatedentries"})
-    #if related_entries:
+    #if soup.find_all('span', {"class": "def"}):
+    #    header = soup.find('div', {"class": "webtop-g"})
+    #    word = header.find('h2', {"class": "h"}).get_text()
+    #    word_type = header.find('span', {"class": "pos"}).get_text()
+    #    results.add(json.dumps({'word': word, 'word_type': word_type, 'link': result_link}))
+
+    # related_entries = soup.find('div', {"id": "relatedentries"})
+    # if related_entries:
     #    for a in related_entries.find_all('a'):
     #        if a.has_attr('href'):
     #            link = a['href']
@@ -130,59 +131,115 @@ def get_articles_list(word):
 
 
 def get_article(url):
-    if OPEN_ARTICLE_IN_BROWSER:
-        webbrowser.open(url, 0, False)
-    result = ""
+    #TODO не делать повторный запрос
     chosen_response = requests.get(url, headers=HEADERS)
     chosen_data = chosen_response.content
     chosen_soup = BeautifulSoup(chosen_data, 'html.parser')
 
-    header = chosen_soup.find('div', {"class": "webtop-g"})
-    word = header.find('h2', {"class": "h"}).get_text()
-    word_type = header.find('span', {"class": "pos"}).get_text()
-
     entry = chosen_soup.find('div', {"class": "entry"})
-    ol = entry.find('ol', {"class": "h-g"})
-    if ol:
-        shcut_gs = ol.find_all('span', {"class": "shcut-g"})
-        if len(shcut_gs) > 0:
-            for shcut_gs in shcut_gs:
-                #shcut = shcut_gs.find('span', {"class": "shcut"})
-                #if shcut:
-                #    result += '<i>'+shcut.get_text()+'</i><br>'
-                for li in shcut_gs.find_all('li', {"class": "sn-g"}):
-                    for deff in li.find_all('span', {"class": "def"}):
-                        result += '<b>'+deff.get_text()+'</b>' + "<br>"
-                    examples = li.find_all('span', {"class": "x"})
-                    if len(examples) > 0:
-                        result += "Ex:<br>"
-                        for ex in examples:
-                            result += '* ' + ex.get_text() + "<br>"
-                    result += "<br>"
-                result += "<hr>"
-        else:
-            for li in ol.find_all('li', {"class": "sn-g"}):
-                for deff in li.find_all('span', {"class": "def"}):
-                    result += '<b>'+deff.get_text()+'</b>' + "<br>"
-                examples = li.find_all('span', {"class": "x"})
-                if len(examples) > 0:
-                    result += "Ex:<br>"
-                    for ex in examples:
-                        result += '* ' + ex.get_text() + "<br>"
-                result += "<br>"
-    else:
-        deff = entry.find('span', {"class": "def"})
-        if deff:
-            result += '<b>'+deff.get_text()+'</b>' + "<br>"
-            examples = entry.find_all('span', {"class": "x"})
-            if len(examples) > 0:
-                result += "Ex:<br>"
-                for ex in examples:
-                    result += '* ' + ex.get_text() + "<br>"
-    result = re.sub('(<br>)+', '<br>', result)
-    result = result.replace('<br><hr>', '<hr>')
-    result = re.sub('(<br>)*(<hr>)*$', '', result)
-    return result
+
+    header = entry.find('div', {"class": "top-container"})
+    if header is not None:
+        # word = header.find('h2', {"class": "h"}).get_text()
+        # word_type = header.find('span', {"class": "pos"}).get_text()
+        header.decompose()
+
+    # tags to delete
+    ring_links_box_tags = entry.find_all('div', {"id": "ring-links-box"})
+    for ring_links_box_tag in ring_links_box_tags:
+        ring_links_box_tag.decompose()
+
+    dictlinks_tags = entry.find_all('span', {"class": "dictlinks"})
+    for dictlinks_tags in dictlinks_tags:
+        dictlinks_tags.decompose()
+
+    pron_link_tags = entry.find_all('div', {"class": "pron-link"})
+    for pron_link_tag in pron_link_tags:
+        pron_link_tag.decompose()
+
+    xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
+    for xr_gs_tag in xr_gs_tags:
+        xr_gs_tag.decompose()
+
+    dr_gs_tags = entry.find_all('span', {"class": "dr-gs"})
+    for dr_gs_tag in dr_gs_tags:
+        dr_gs_tag.decompose()
+
+    collapse_tags = entry.find_all('span', {"class": "collapse"})
+    for collapse_tag in collapse_tags:
+        collapse_tag.decompose()
+
+    gram_g_tags = entry.find_all('span', {"class": "gram-g"})
+    for gram_g_tag in gram_g_tags:
+        gram_g_tag.decompose()
+
+    num_tags = entry.find_all('span', {"class": "num"})
+    for num_tag in num_tags:
+        num_tag.decompose()
+
+    script_tags = entry.find_all('script')
+    for script_tag in script_tags:
+        script_tag.decompose()
+
+    idm_gs_tags = entry.find_all('span', {"class": "idm-gs"})
+    for idm_gs_tag in idm_gs_tags:
+        idm_gs_tag.decompose()
+
+    ox_enlarge_tags = entry.find_all('div', {"id": "ox-enlarge"})
+    for ox_enlarge_tag in ox_enlarge_tags:
+        ox_enlarge_tag.decompose()
+
+    pron_g_tags = entry.find_all('span', {"class": "pron-g"})
+    for pron_g_tag in pron_g_tags:
+        pron_g_tag.decompose()
+
+    # examples
+    x_g_tags = entry.find_all('span', {"class": "x-g"})
+    for x_g in x_g_tags:
+        new_param = BeautifulSoup('<li>' + x_g.get_text() + '</li>', 'html.parser')
+        x_g.replaceWith(new_param)
+
+    x_gs_tags = entry.find_all('span', {"class": "x-gs"})
+    for x_g in x_gs_tags:
+        new_param = BeautifulSoup('<ul>' + x_g.decode_contents() + '</ul>', 'html.parser')
+        x_g.replaceWith(new_param)
+
+    # hr
+    shcut_tags = entry.find_all('span', {"class": "shcut"})
+    for shcut_tag in shcut_tags[:1]:
+        new_param = BeautifulSoup('<i>' + shcut_tag.get_text() + '</i>', 'html.parser')
+        shcut_tag.replaceWith(new_param)
+    for shcut_tag in shcut_tags[1:]:
+        new_param = BeautifulSoup('<hr/><i>' + shcut_tag.get_text() + '</i>', 'html.parser')
+        shcut_tag.replaceWith(new_param)
+
+    # unwrap
+    for match in entry.find_all('span'):
+        match.unwrap()
+
+    for match in entry.find_all('div'):
+        match.unwrap()
+
+    for match in entry.find_all('strong'):
+        match.unwrap()
+
+    entry = CleanSoup(entry)
+    entry = BeautifulSoup(entry.decode_contents(), 'html.parser').prettify()
+
+    entry = re.sub("\(\s+", "(", entry)
+    entry = re.sub("\s+\)", ")", entry)
+
+    return str(entry)
+
+
+def CleanSoup(content):
+    for attr in list(content.attrs):
+        del content.attrs[attr]
+    for tags in content.find_all():
+        for val in list(tags.attrs):
+            del tags.attrs[val]
+    return content
+
 
 def _abbreviate_part_of_speech(part_of_speech):
     if part_of_speech in PART_OF_SPEECH_ABBREVIATION.keys():
@@ -222,6 +279,7 @@ def setup_buttons(buttons, editor):
 
     buttons.append(both_button)
     return buttons
+
 
 addHook("setupEditorButtons", setup_buttons)
 
