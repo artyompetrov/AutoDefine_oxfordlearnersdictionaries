@@ -25,13 +25,55 @@ from xml.etree import ElementTree as ET
 from bs4 import BeautifulSoup
 import json
 import requests
-
+#from . import nltk
 from .libs import webbrowser
+#from . import regex
 
+import importlib.util
+import sys
+
+#spec = importlib.util.spec_from_file_location("regex", r'C:\Users\APETROV\PycharmProjects\AutoDefine_oxfordlearnersdictionaries\AutoDefineAddon\regex\__init__.py')
+
+#spec = importlib.util.spec_from_file_location("nltk", r'C:\Users\APETROV\PycharmProjects\AutoDefine_oxfordlearnersdictionaries\AutoDefineAddon\nltk\__init__.py')
+#nltk = importlib.util.module_from_spec(spec)
+#sys.modules["nltk"] = nltk
+#spec.loader.exec_module(nltk)
+
+from contextlib import contextmanager
+#import importlib.util as ilu
+#folder ='__init__.py'
+#module = 'regex'
+#spec = ilu.spec_from_file_location(module, folder)
+#your_lib = ilu.module_from_spec(spec)
+#spec.loader.exec_module(your_lib)
+
+@contextmanager
+def add_to_path(p):
+    import sys
+    old_path = sys.path
+    sys.path = sys.path[:]
+    sys.path.insert(0, str(p))
+    try:
+        yield
+    finally:
+        sys.path = old_path
+
+def path_import(name, absolute_path):
+    init_file = absolute_path + name + '\\__init__.py'
+    with add_to_path(absolute_path):
+        spec = importlib.util.spec_from_file_location(name, init_file)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+
+nltk = path_import('nltk', 'C:\\Users\\APETROV\\PycharmProjects\\AutoDefine_oxfordlearnersdictionaries\\AutoDefineAddon\\modules\\')
 # --------------------------------- SETTINGS ---------------------------------
 
 # Index of field to insert definitions into (use -1 to turn off)
 DEFINITION_FIELD = 1
+
+PRONUNCIATION_FIELD = 2
 
 CORPUS = 'american_english'
 
@@ -43,6 +85,8 @@ OPEN_ARTICLE_IN_BROWSER = True
 PRIMARY_SHORTCUT = "ctrl+alt+e"
 
 PART_OF_SPEECH_ABBREVIATION = {"verb": "v.", "noun": "n.", "adverb": "adv.", "adjective": "adj."}
+
+
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -97,6 +141,19 @@ def _get_definition(editor):
 
     _focus_zero_field(editor)
 
+def replace_word_in_example(word, example):
+    lem = nltk.stem.WordNetLemmatizer()
+    tokenized_word = nltk.tokenize.word_tokenize(example)
+    lemmed_words = []
+    for w in tokenized_word:
+        lemmed_words.append(lem.lemmatize(w))
+    return str(lemmed_words)
+
+def download_nltk_components():
+    nltk.download('wordnet')
+    nltk.download('punkt')
+    nltk.download('omw-1.4')
+    pass
 
 def get_articles_list(word):
     word.replace(' ', '-')
@@ -196,7 +253,7 @@ def get_article(url):
     # examples
     x_g_tags = entry.find_all('span', {"class": "x-g"})
     for x_g in x_g_tags:
-        new_param = BeautifulSoup('<li>' + x_g.get_text() + '</li>', 'html.parser')
+        new_param = BeautifulSoup('<li>' + replace_word_in_example("",x_g.get_text()) + '</li>', 'html.parser')
         x_g.replaceWith(new_param)
 
     x_gs_tags = entry.find_all('span', {"class": "x-gs"})
@@ -207,7 +264,7 @@ def get_article(url):
     # hr
     shcut_tags = entry.find_all('span', {"class": "shcut"})
     for shcut_tag in shcut_tags[:1]:
-        new_param = BeautifulSoup('<i>' + shcut_tag.get_text() + '</i>', 'html.parser')
+        new_param = BeautifulSoup('<i>' +  shcut_tag.get_text() + '</i>', 'html.parser')
         shcut_tag.replaceWith(new_param)
     for shcut_tag in shcut_tags[1:]:
         new_param = BeautifulSoup('<hr/><i>' + shcut_tag.get_text() + '</i>', 'html.parser')
