@@ -25,27 +25,10 @@ from xml.etree import ElementTree as ET
 from bs4 import BeautifulSoup
 import json
 import requests
-#from . import nltk
-from .libs import webbrowser
-#from . import regex
-
+from .webbrowser import webbrowser
 import importlib.util
 import sys
-
-#spec = importlib.util.spec_from_file_location("regex", r'C:\Users\APETROV\PycharmProjects\AutoDefine_oxfordlearnersdictionaries\AutoDefineAddon\regex\__init__.py')
-
-#spec = importlib.util.spec_from_file_location("nltk", r'C:\Users\APETROV\PycharmProjects\AutoDefine_oxfordlearnersdictionaries\AutoDefineAddon\nltk\__init__.py')
-#nltk = importlib.util.module_from_spec(spec)
-#sys.modules["nltk"] = nltk
-#spec.loader.exec_module(nltk)
-
 from contextlib import contextmanager
-#import importlib.util as ilu
-#folder ='__init__.py'
-#module = 'regex'
-#spec = ilu.spec_from_file_location(module, folder)
-#your_lib = ilu.module_from_spec(spec)
-#spec.loader.exec_module(your_lib)
 
 @contextmanager
 def add_to_path(p):
@@ -68,6 +51,7 @@ def path_import(name, absolute_path):
         return module
 
 nltk = path_import('nltk', 'C:\\Users\\APETROV\\PycharmProjects\\AutoDefine_oxfordlearnersdictionaries\\AutoDefineAddon\\modules\\')
+
 # --------------------------------- SETTINGS ---------------------------------
 
 # Index of field to insert definitions into (use -1 to turn off)
@@ -78,18 +62,31 @@ PRONUNCIATION_FIELD = 2
 CORPUS = 'american_english'
 
 # Open a browser tab with an image search for the same word?
-OPEN_IMAGES_IN_BROWSER = False
-
-OPEN_ARTICLE_IN_BROWSER = True
+OPEN_IMAGES_IN_BROWSER = True
 
 PRIMARY_SHORTCUT = "ctrl+alt+e"
 
 PART_OF_SPEECH_ABBREVIATION = {"verb": "v.", "noun": "n.", "adverb": "adv.", "adjective": "adj."}
 
+replace_by = '_'
 
+from nltk.stem.wordnet import WordNetLemmatizer
+lem = WordNetLemmatizer()
+#from nltk.stem import PorterStemmer
+#ps = PorterStemmer()
+tokinize = nltk.wordpunct_tokenize
+unify = lem.lemmatize
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
+def download_nltk_components():
+    nltk.download('wordnet')
+    nltk.download('punkt')
+    nltk.download('omw-1.4')
+
+
+#download_nltk_components()
 
 
 def get_definition(editor):
@@ -141,19 +138,54 @@ def _get_definition(editor):
 
     _focus_zero_field(editor)
 
-def replace_word_in_example(word, example):
-    lem = nltk.stem.WordNetLemmatizer()
-    tokenized_word = nltk.tokenize.word_tokenize(example)
-    lemmed_words = []
-    for w in tokenized_word:
-        lemmed_words.append(lem.lemmatize(w))
-    return str(lemmed_words)
 
-def download_nltk_components():
-    nltk.download('wordnet')
-    nltk.download('punkt')
-    nltk.download('omw-1.4')
-    pass
+def nltk_token_spans(txt):
+    tokens=tokinize(txt)
+    offset = 0
+    for token in tokens:
+        offset = txt.find(token, offset)
+        next_offset = offset+len(token)
+        yield token, offset, next_offset
+        assert token == txt[offset:next_offset]
+        offset = next_offset
+
+
+def replace_word_in_example(words, example):
+    words_to_replace = [unify(str.lower(word)) for word in tokinize(words)]
+
+    result = str()
+    spans = list(nltk_token_spans(example))
+
+    position = 0
+    while position < len(spans):
+        all_match = True
+        cur_posititon = position
+        for word_to_replace in words_to_replace:
+            token, start, stop = spans[cur_posititon]
+            if all_match:
+                if unify(str.lower(token)) != word_to_replace:
+                    all_match = False
+                    break
+                else:
+                    cur_posititon += 1
+                    if cur_posititon >= len(spans):
+                        break
+        if all_match:
+            for i in range(len(words_to_replace)):
+                token, start, stop = spans[position + i]
+                spaces_to_add = start - len(result)
+                result += ' ' * spaces_to_add
+                result += replace_by * len(token)
+
+            position += len(words_to_replace)
+        else:
+            token, start, stop = spans[position]
+            spaces_to_add = start - len(result)
+            result += ' ' * spaces_to_add
+            result += token
+            position += 1
+    return result
+
 
 def get_articles_list(word):
     word.replace(' ', '-')
@@ -196,10 +228,9 @@ def get_article(url):
     entry = chosen_soup.find('div', {"class": "entry"})
 
     header = entry.find('div', {"class": "top-container"})
-    if header is not None:
-        # word = header.find('h2', {"class": "h"}).get_text()
-        # word_type = header.find('span', {"class": "pos"}).get_text()
-        header.decompose()
+    word = header.find('h2', {"class": "h"}).get_text()
+    word_type = header.find('span', {"class": "pos"}).get_text()
+    header.decompose()
 
     # tags to delete
     ring_links_box_tags = entry.find_all('div', {"id": "ring-links-box"})
@@ -253,7 +284,10 @@ def get_article(url):
     # examples
     x_g_tags = entry.find_all('span', {"class": "x-g"})
     for x_g in x_g_tags:
-        new_param = BeautifulSoup('<li>' + replace_word_in_example("",x_g.get_text()) + '</li>', 'html.parser')
+        cfs = x_g.find_all('span', {"class": "cf"})
+        for cf in cfs:
+            cf.decompose()
+        new_param = BeautifulSoup('<li>' + replace_word_in_example(word, x_g.get_text()) + '</li>', 'html.parser')
         x_g.replaceWith(new_param)
 
     x_gs_tags = entry.find_all('span', {"class": "x-gs"})
@@ -264,7 +298,7 @@ def get_article(url):
     # hr
     shcut_tags = entry.find_all('span', {"class": "shcut"})
     for shcut_tag in shcut_tags[:1]:
-        new_param = BeautifulSoup('<i>' +  shcut_tag.get_text() + '</i>', 'html.parser')
+        new_param = BeautifulSoup('<i>' + shcut_tag.get_text() + '</i>', 'html.parser')
         shcut_tag.replaceWith(new_param)
     for shcut_tag in shcut_tags[1:]:
         new_param = BeautifulSoup('<hr/><i>' + shcut_tag.get_text() + '</i>', 'html.parser')
