@@ -10,6 +10,7 @@ Only tested on Anki 2.1.x.
 **Note:** This add-on uses Oxford Learner's Dictionaries to get definitions. Html parsing method is used, no API key required. 
 
 ## License & Credits
-Icon made by [Flaticon](https://www.flaticon.com/free-icons/portfolio)
 
 Code licensed under GPLv2
+
+Based on https://github.com/z1lc/AutoDefine
