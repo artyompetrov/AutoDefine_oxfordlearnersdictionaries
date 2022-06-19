@@ -1,4 +1,5 @@
 AutoDefine Oxford Learner's Dictionaries Anki Add-On
+[Anki Add-On page](https://ankiweb.net/shared/info/1232597197)
 ==========
 <img align="right" src="AutoDefineAddon/images/icon512.png" width="256" height="256">
 
@@ -12,7 +13,3 @@ Only tested on Anki 2.1.x.
 Icon made by [Flaticon](https://www.flaticon.com/free-icons/portfolio)
 
 Code licensed under GPLv2
-
-## Release Information
-
-To release to [AnkiWeb](https://ankiweb.net):  package AutoDefine_oxfordlearnersdictionaries folder into zip file; upload via [this link]().

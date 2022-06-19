@@ -29,8 +29,9 @@ def add_to_path(p):
     finally:
         sys.path = old_path
 
-def path_import(name, absolute_path):
-    init_file = absolute_path + name + '\\__init__.py'
+def path_import(name):
+    absolute_path = os.path.join(os.getenv('APPDATA'), "Anki2", "addons21", "570730390", "modules")
+    init_file = os.path.join(absolute_path, name, '__init__.py')
     with add_to_path(absolute_path):
         spec = importlib.util.spec_from_file_location(name, init_file)
         module = importlib.util.module_from_spec(spec)
@@ -38,7 +39,7 @@ def path_import(name, absolute_path):
         spec.loader.exec_module(module)
         return module
 
-nltk = path_import('nltk', 'C:\\Users\\APETROV\\PycharmProjects\\AutoDefine_oxfordlearnersdictionaries\\AutoDefineAddon\\modules\\')
+nltk = path_import('nltk')
 
 # --------------------------------- SETTINGS ---------------------------------
 
@@ -140,6 +141,7 @@ def replace_word_in_example(words, example):
     result = str()
     spans = list(nltk_token_spans(example))
 
+    replaced_anything = False
     position = 0
     while position < len(spans):
         all_match = True
@@ -162,17 +164,21 @@ def replace_word_in_example(words, example):
                 result += replace_by * len(token)
 
             position += len(words_to_replace)
+            replaced_anything = True
         else:
             token, start, stop = spans[position]
             spaces_to_add = start - len(result)
             result += ' ' * spaces_to_add
             result += token
             position += 1
+
+    if not replaced_anything:
+        result = '<p style="color:blue">' + result + '</p>'
+
     return result
 
 
 def get_articles_list(request_word):
-    request_word = "book"
     request_word = request_word.replace(' ', '-')
     url = f'https://www.oxfordlearnersdictionaries.com/search/{CORPUS}/?q={request_word}'
     response = requests.get(url, headers=HEADERS)
