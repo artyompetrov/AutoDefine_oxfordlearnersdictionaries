@@ -1,9 +1,11 @@
 {
   "1 params": {
+    "DEBUG": false,
     "DEFINITION_FIELD": 1,
-    "OPEN_IMAGES_IN_BROWSER": false
+    "OPEN_IMAGES_IN_BROWSER": false,
+    "REPLACE_BY": "____"
   },
   "2 shortcuts": {
-    "1 PRIMARY_SHORTCUT": "ctrl+alt+e"
+    "PRIMARY_SHORTCUT": "ctrl+alt+e"
   }
 }

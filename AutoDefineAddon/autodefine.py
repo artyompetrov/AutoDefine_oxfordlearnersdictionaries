@@ -41,21 +41,19 @@ def path_import(name):
 
 nltk = path_import('nltk')
 
-# --------------------------------- SETTINGS ---------------------------------
-
-# Index of field to insert definitions into (use -1 to turn off)
 DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
 
 CORPUS = 'american_english'
 
-# Open a browser tab with an image search for the same word?
 OPEN_IMAGES_IN_BROWSER = True
 
 PRIMARY_SHORTCUT = "ctrl+alt+e"
 
-replace_by = '_'
+REPLACE_BY = '____'
+
+DEBUG = False
 
 #from nltk.stem.wordnet import WordNetLemmatizer
 #lem = WordNetLemmatizer()
@@ -64,33 +62,29 @@ ps = PorterStemmer()
 tokinize = nltk.wordpunct_tokenize
 unify = ps.stem
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-
-def download_nltk_components():
-    nltk.download('wordnet')
-    nltk.download('punkt')
-    nltk.download('omw-1.4')
-
-
-#download_nltk_components()
+HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36' }
 
 
 def get_definition(editor):
-    editor.saveNow(lambda: _get_definition(editor))
+    try:
+        editor.saveNow(lambda: _get_definition(editor))
+    except Exception as ex:
+        raise Exception("Error occurred. Please copy this error massage and open an issue on "
+                        "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues "
+                        "so I could investigate the reason of error and fix it") from ex
 
 
 def validate_settings():
     pass
 
 
-def _focus_zero_field(editor):
+def focus_zero_field(editor):
     # no idea why, but sometimes web seems to be unavailable
     if editor.web:
         editor.web.eval("focusField(%d);" % 0)
 
 
-def _get_word(editor):
+def get_word(editor):
     word = ""
     maybe_web = editor.web
     if maybe_web:
@@ -107,25 +101,30 @@ def _get_word(editor):
 
 def _get_definition(editor):
     validate_settings()
-    word = _get_word(editor)
+    word = get_word(editor)
     if word == "":
         tooltip("AutoDefine: No text found in note fields.")
         return
 
     articles_list = get_articles_list(word)
 
+    insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
+    if DEBUG:
+        for article in articles_list:
+            insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>', DEFINITION_FIELD, overwrite=False)
+
     to_return = get_article(articles_list)
 
-    insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=True)
+    insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open("https://www.google.com/search?q= " + word + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
 
-    _focus_zero_field(editor)
+    focus_zero_field(editor)
 
 
 def nltk_token_spans(txt):
-    tokens=tokinize(txt)
+    tokens = tokinize(txt)
     offset = 0
     for token in tokens:
         offset = txt.find(token, offset)
@@ -143,6 +142,7 @@ def replace_word_in_example(words, example):
 
     replaced_anything = False
     position = 0
+    offset = 0
     while position < len(spans):
         all_match = True
         cur_posititon = position
@@ -159,21 +159,27 @@ def replace_word_in_example(words, example):
         if all_match:
             for i in range(len(words_to_replace)):
                 token, start, stop = spans[position + i]
-                spaces_to_add = start - len(result)
+                replacement = REPLACE_BY.replace("$", token)
+                spaces_to_add = start - len(result) - offset
+                offset += len(token) - len(replacement)
+                if spaces_to_add < 0:
+                    raise Exception("Incorrect spaces_to_add value")
                 result += ' ' * spaces_to_add
-                result += replace_by * len(token)
+                result += replacement
 
             position += len(words_to_replace)
             replaced_anything = True
         else:
             token, start, stop = spans[position]
-            spaces_to_add = start - len(result)
+            spaces_to_add = start - len(result) - offset
+            if spaces_to_add < 0:
+                raise Exception("Incorrect spaces_to_add value")
             result += ' ' * spaces_to_add
             result += token
             position += 1
 
     if not replaced_anything:
-        result = '<p style="color:blue">' + result + '</p>'
+        result = '<font color="#0000ff" class="clean_ignore">' + result + '</font>'
 
     return result
 
@@ -270,6 +276,13 @@ def get_article(articles_list):
         for pron_g_tag in pron_g_tags:
             pron_g_tag.decompose()
 
+        sn_g_tags = entry.find_all('li', {"class": "sn-g"})
+        for sn_g_tag in sn_g_tags:
+            cfs = sn_g_tag.find_all('span', {"class": "cf"}, recursive=False)
+            for cf in cfs:
+                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, cf.get_text()) + '</i><br/>', 'html.parser')
+                cf.replaceWith(new_param)
+
         # examples
         x_g_tags = entry.find_all('span', {"class": "x-g"})
         for x_g in x_g_tags:
@@ -303,7 +316,7 @@ def get_article(articles_list):
         for match in entry.find_all('strong'):
             match.unwrap()
 
-        entry = CleanSoup(entry).decode_contents()
+        entry = clean_soup(entry).decode_contents()
 
         entry = re.sub("\(\s+", "(", entry)
         entry = re.sub("\s+\)", ")", entry)
@@ -318,10 +331,13 @@ def get_article(articles_list):
     return "<hr>".join(result)
 
 
-def CleanSoup(content):
+def clean_soup(content):
     for attr in list(content.attrs):
         del content.attrs[attr]
     for tags in content.find_all():
+        if tags.has_attr('class') and 'clean_ignore' in tags['class']:
+            continue
+
         for val in list(tags.attrs):
             del tags.attrs[val]
     return content
@@ -367,12 +383,17 @@ if getattr(mw.addonManager, "getConfig", None):
 
     if '1 params' in config:
         extra = config['1 params']
+        if 'DEBUG' in extra:
+            DEBUG = extra['DEBUG']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
+        if 'REPLACE_BY' in extra:
+            REPLACE_BY = extra['REPLACE_BY']
+
 
     if '2 shortcuts' in config:
         shortcuts = config['2 shortcuts']
-        if '1 PRIMARY_SHORTCUT' in shortcuts:
-            PRIMARY_SHORTCUT = shortcuts['1 PRIMARY_SHORTCUT']
+        if 'PRIMARY_SHORTCUT' in shortcuts:
+            PRIMARY_SHORTCUT = shortcuts['PRIMARY_SHORTCUT']
