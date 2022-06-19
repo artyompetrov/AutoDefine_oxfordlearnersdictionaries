@@ -362,7 +362,7 @@ def clean_html(raw_html):
 
 
 def setup_buttons(buttons, editor):
-    both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon16.png"),
+    both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
                                    cmd="AD",
                                    func=get_definition,
                                    tip="AutoDefine Word (%s)" %
