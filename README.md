@@ -1,5 +1,5 @@
 AutoDefine Oxford Learner's Dictionaries Anki Add-On
-[Anki Add-On page](https://ankiweb.net/shared/info/1232597197)
+[Anki Add-On page](https://ankiweb.net/shared/info/570730390)
 ==========
 <img align="right" src="AutoDefineAddon/images/icon512.png" width="256" height="256">
 

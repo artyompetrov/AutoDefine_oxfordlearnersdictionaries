@@ -1,5 +1,0 @@
-https://ankiweb.net/shared/info/1232597197
-
-AutoDefine Oxford Learner's Dictionaries - modification of AutoDefine https://ankiweb.net/shared/info/2136497008 that uses https://www.oxfordlearnersdictionaries.com/ as a source of definitions
-
-https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries
