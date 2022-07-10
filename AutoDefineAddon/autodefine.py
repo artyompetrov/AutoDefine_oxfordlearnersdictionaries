@@ -41,6 +41,8 @@ def path_import(name):
 
 nltk = path_import('nltk')
 
+SOURCE_FIELD = 0
+
 DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
@@ -48,6 +50,8 @@ PRONUNCIATION_FIELD = 2
 CORPUS = 'american_english'
 
 OPEN_IMAGES_IN_BROWSER = True
+
+GOOGLESEARCH_APPEND = " meaning"
 
 PRIMARY_SHORTCUT = "ctrl+alt+e"
 
@@ -93,7 +97,7 @@ def get_word(editor):
     if word is None or word == "":
         maybe_note = editor.note
         if maybe_note:
-            word = maybe_note.fields[0]
+            word = maybe_note.fields[SOURCE_FIELD]
 
     word = clean_html(word).strip()
     return word
@@ -118,7 +122,7 @@ def _get_definition(editor):
     insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
 
     if OPEN_IMAGES_IN_BROWSER:
-        webbrowser.open("https://www.google.com/search?q= " + word + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
+        webbrowser.open("https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
 
     focus_zero_field(editor)
 
@@ -385,12 +389,16 @@ if getattr(mw.addonManager, "getConfig", None):
         extra = config['1 params']
         if 'DEBUG' in extra:
             DEBUG = extra['DEBUG']
+        if 'SOURCE_FIELD' in extra:
+            SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:
             REPLACE_BY = extra['REPLACE_BY']
+        if 'GOOGLESEARCH_APPEND' in extra:
+            GOOGLESEARCH_APPEND = extra['GOOGLESEARCH_APPEND']
 
 
     if '2 shortcuts' in config:
