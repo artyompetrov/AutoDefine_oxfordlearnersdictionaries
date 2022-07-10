@@ -51,7 +51,7 @@ CORPUS = 'american_english'
 
 OPEN_IMAGES_IN_BROWSER = True
 
-GOOGLESEARCH_APPEND = " meaning"
+GOOGLESEARCH_APPEND = " definition"
 
 PRIMARY_SHORTCUT = "ctrl+alt+e"
 
