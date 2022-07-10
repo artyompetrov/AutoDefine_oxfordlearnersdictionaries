@@ -196,9 +196,9 @@ def get_articles_list(request_word):
     result_link = response.url
     results = list()
     if 'spellcheck' in result_link:
-        raise Exception("spellcheck error")
+        raise Exception("spellcheck error url: " + url)
     else:
-        result_link = result_link.split("?")[0]
+        result_link = result_link.split("?")[0].split("#")[0]
         results.append({'word': request_word, 'link': result_link, 'data': data})
         pattern = r"_(\d+)$"
         if re.search(pattern, result_link):
