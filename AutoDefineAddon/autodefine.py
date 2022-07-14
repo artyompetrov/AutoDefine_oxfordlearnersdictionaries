@@ -8,6 +8,7 @@
 
 import os
 import re
+import requests
 from anki.hooks import addHook
 from aqt import mw
 from aqt.utils import tooltip
@@ -17,6 +18,7 @@ from .webbrowser import webbrowser
 import importlib.util
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 @contextmanager
 def add_to_path(p):
@@ -47,6 +49,8 @@ DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
 
+AUDIO_FIELD = 3
+
 CORPUS = 'american_english'
 
 OPEN_IMAGES_IN_BROWSER = True
@@ -58,6 +62,8 @@ PRIMARY_SHORTCUT = "ctrl+alt+e"
 REPLACE_BY = '____'
 
 DEBUG = False
+
+AUDIO = True
 
 #from nltk.stem.wordnet import WordNetLemmatizer
 #lem = WordNetLemmatizer()
@@ -120,6 +126,10 @@ def _get_data(editor):
     definition = get_article(articles_list)
 
     insert_into_field(editor, definition, DEFINITION_FIELD, overwrite=False)
+
+    if AUDIO:
+        audio = get_audio(articles_list[0])
+        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open("https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
@@ -335,6 +345,27 @@ def get_article(articles_list):
     return "<hr>".join(result)
 
 
+def get_audio(article):
+    data = article['data']
+
+    chosen_soup = BeautifulSoup(data, 'html.parser')
+
+    audio_button = chosen_soup.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
+    audio_link = audio_button.attrs["data-src-mp3"]
+    audio_name = audio_link.split('/')[-1]
+
+    collection_path = Path(mw.col.path).parent.absolute()
+    media_path = os.path.join(collection_path, "collection.media")
+    audio_path = os.path.join(media_path, audio_name)
+
+    if(not os.path.exists(audio_path)):
+        response = requests.get(audio_link, headers=HEADERS)
+        with open(audio_path, 'wb') as f:
+            f.write(response.content)
+    
+    return f"[sound:{audio_name}]"
+
+
 def clean_soup(content):
     for attr in list(content.attrs):
         del content.attrs[attr]
@@ -389,10 +420,14 @@ if getattr(mw.addonManager, "getConfig", None):
         extra = config['1 params']
         if 'DEBUG' in extra:
             DEBUG = extra['DEBUG']
+        if 'AUDIO' in extra:
+            AUDIO = extra['AUDIO']
         if 'SOURCE_FIELD' in extra:
             SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
+        if 'AUDIO_FIELD' in extra:
+            AUDIO_FIELD = extra['AUDIO_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:

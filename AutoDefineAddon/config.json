@@ -1,8 +1,10 @@
 {
   "1 params": {
     "DEBUG": false,
+    "AUDIO": true,
     "SOURCE_FIELD": 0,
     "DEFINITION_FIELD": 1,
+    "AUDIO_FIELD": 3,
     "OPEN_IMAGES_IN_BROWSER": false,
     "GOOGLESEARCH_APPEND": " definition",
     "REPLACE_BY": "____"
