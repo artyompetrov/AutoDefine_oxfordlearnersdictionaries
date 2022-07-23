@@ -17,6 +17,8 @@ from .webbrowser import webbrowser
 import importlib.util
 import sys
 from contextlib import contextmanager
+import pathlib
+
 
 @contextmanager
 def add_to_path(p):
@@ -30,7 +32,7 @@ def add_to_path(p):
         sys.path = old_path
 
 def path_import(name):
-    absolute_path = os.path.join(os.getenv('APPDATA'), "Anki2", "addons21", "570730390", "modules")
+    absolute_path = (os.path.join(pathlib.Path(__file__).parent, 'modules'))
     init_file = os.path.join(absolute_path, name, '__init__.py')
     with add_to_path(absolute_path):
         spec = importlib.util.spec_from_file_location(name, init_file)
