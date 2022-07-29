@@ -261,9 +261,10 @@ def get_definition_html(articles_list):
         for pron_link_tag in pron_link_tags:
             pron_link_tag.decompose()
 
-        xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
-        for xr_gs_tag in xr_gs_tags:
-            xr_gs_tag.decompose()
+        # definition in format " = link to another card"
+        #xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
+        #for xr_gs_tag in xr_gs_tags:
+        #    xr_gs_tag.decompose()
 
         dr_gs_tags = entry.find_all('span', {"class": "dr-gs"})
         for dr_gs_tag in dr_gs_tags:
