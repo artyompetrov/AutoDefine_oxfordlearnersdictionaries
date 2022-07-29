@@ -11,6 +11,7 @@ import re
 from anki.hooks import addHook
 from aqt import mw
 from aqt.utils import tooltip
+from aqt.utils import askUser
 from bs4 import BeautifulSoup
 import requests
 from .webbrowser import webbrowser
@@ -60,7 +61,6 @@ PRIMARY_SHORTCUT = "ctrl+alt+e"
 REPLACE_BY = '____'
 
 DEBUG = False
-
 
 ps = nltk.stem.PorterStemmer()
 tokinize = nltk.wordpunct_tokenize
@@ -113,17 +113,26 @@ def _get_definition(editor):
         tooltip("AutoDefine: No text found in note fields.")
         return
 
-    articles_list = get_articles_list(word)
+    is_successful, found_word, articles = get_links_to_articles(word)
+
+    if not is_successful:
+        tooltip(f"Word '{word}' not found.")
+        return
 
     insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
     if DEBUG:
-        for article in articles_list:
+        for article in articles:
             insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>',
                               DEFINITION_FIELD, overwrite=False)
 
-    to_return = get_article(articles_list)
+    definition_html = get_definition_html(articles)
 
-    insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
+    insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
+
+    if found_word != word:
+        if askUser(f"Attention! found another word '{found_word}', replace source field?"):
+            insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
+            word = found_word
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open(
@@ -194,7 +203,7 @@ def replace_word_in_example(words, example):
     return result
 
 
-def get_articles_list(request_word):
+def get_links_to_articles(request_word):
     request_word = request_word.replace(' ', '-')
     url = f'https://www.oxfordlearnersdictionaries.com/search/american_english/?q={request_word}'
     response = requests.get(url, headers=HEADERS)
@@ -202,10 +211,11 @@ def get_articles_list(request_word):
     result_link = response.url
     results = list()
     if 'spellcheck' in result_link:
-        raise Exception("spellcheck error url: " + url)
+        return False, None, None
     else:
         result_link = result_link.split("?")[0].split("#")[0]
-        results.append({'word': request_word, 'link': result_link, 'data': data})
+        found_word = result_link.split('/')[-1].split('_')[0]
+        results.append({'link': result_link, 'data': data})
         pattern = r"_(\d+)$"
         if re.search(pattern, result_link):
             max_attempts = 5
@@ -218,11 +228,12 @@ def get_articles_list(request_word):
                 if 'Word not found in the dictionary' in str(data):
                     break
                 else:
-                    results.append({'word': request_word, 'link': maybe_result_link, 'data': data})
-    return results
+                    results.append({'link': maybe_result_link, 'data': data})
+
+        return True, found_word, results
 
 
-def get_article(articles_list):
+def get_definition_html(articles_list):
     need_part_of_speech = len(articles_list) > 1
     result = list()
     for article in articles_list:
