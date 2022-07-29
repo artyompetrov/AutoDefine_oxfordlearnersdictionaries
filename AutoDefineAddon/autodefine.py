@@ -19,6 +19,7 @@ import sys
 from contextlib import contextmanager
 import pathlib
 
+
 @contextmanager
 def add_to_path(p):
     import sys
@@ -30,6 +31,7 @@ def add_to_path(p):
     finally:
         sys.path = old_path
 
+
 def path_import(name):
     absolute_path = os.path.join(pathlib.Path(__file__).parent, 'modules')
     init_file = os.path.join(absolute_path, name, '__init__.py')
@@ -40,6 +42,7 @@ def path_import(name):
         spec.loader.exec_module(module)
         return module
 
+
 nltk = path_import('nltk')
 
 SOURCE_FIELD = 0
@@ -47,8 +50,6 @@ SOURCE_FIELD = 0
 DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
-
-CORPUS = 'american_english'
 
 OPEN_IMAGES_IN_BROWSER = True
 
@@ -60,14 +61,15 @@ REPLACE_BY = '____'
 
 DEBUG = False
 
-#from nltk.stem.wordnet import WordNetLemmatizer
-#lem = WordNetLemmatizer()
-from nltk.stem import PorterStemmer
-ps = PorterStemmer()
+
+ps = nltk.stem.PorterStemmer()
 tokinize = nltk.wordpunct_tokenize
 unify = ps.stem
 
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36' }
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/39.0.2171.95 Safari/537.36'
+}
 
 
 def get_definition(editor):
@@ -116,14 +118,17 @@ def _get_definition(editor):
     insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
     if DEBUG:
         for article in articles_list:
-            insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>', DEFINITION_FIELD, overwrite=False)
+            insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>',
+                              DEFINITION_FIELD, overwrite=False)
 
     to_return = get_article(articles_list)
 
     insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
 
     if OPEN_IMAGES_IN_BROWSER:
-        webbrowser.open("https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
+        webbrowser.open(
+            "https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga",
+            0, False)
 
     focus_zero_field(editor)
 
@@ -133,7 +138,7 @@ def nltk_token_spans(txt):
     offset = 0
     for token in tokens:
         offset = txt.find(token, offset)
-        next_offset = offset+len(token)
+        next_offset = offset + len(token)
         yield token, offset, next_offset
         assert token == txt[offset:next_offset]
         offset = next_offset
@@ -150,16 +155,16 @@ def replace_word_in_example(words, example):
     offset = 0
     while position < len(spans):
         all_match = True
-        cur_posititon = position
+        cur_position = position
         for word_to_replace in words_to_replace:
-            token, start, stop = spans[cur_posititon]
+            token, start, stop = spans[cur_position]
             if all_match:
                 if unify(str.lower(token)) != word_to_replace:
                     all_match = False
                     break
                 else:
-                    cur_posititon += 1
-                    if cur_posititon >= len(spans):
+                    cur_position += 1
+                    if cur_position >= len(spans):
                         break
         if all_match:
             for i in range(len(words_to_replace)):
@@ -191,7 +196,7 @@ def replace_word_in_example(words, example):
 
 def get_articles_list(request_word):
     request_word = request_word.replace(' ', '-')
-    url = f'https://www.oxfordlearnersdictionaries.com/search/{CORPUS}/?q={request_word}'
+    url = f'https://www.oxfordlearnersdictionaries.com/search/american_english/?q={request_word}'
     response = requests.get(url, headers=HEADERS)
     data = response.content
     result_link = response.url
@@ -285,7 +290,8 @@ def get_article(articles_list):
         for sn_g_tag in sn_g_tags:
             cfs = sn_g_tag.find_all('span', {"class": "cf"}, recursive=False)
             for cf in cfs:
-                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, cf.get_text()) + '</i><br/>', 'html.parser')
+                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, cf.get_text()) + '</i><br/>',
+                                          'html.parser')
                 cf.replaceWith(new_param)
 
         # examples
@@ -321,13 +327,17 @@ def get_article(articles_list):
         for match in entry.find_all('strong'):
             match.unwrap()
 
+        for ol in entry.find_all('ol'):
+            new_param = BeautifulSoup('<ul>' + ol.decode_contents() + '</ul>', 'html.parser')
+            ol.replaceWith(new_param)
+
         entry = clean_soup(entry).decode_contents()
 
-        entry = re.sub("\(\s+", "(", entry)
-        entry = re.sub("\s+\)", ")", entry)
+        entry = re.sub(r"\(\s+", "(", entry)
+        entry = re.sub(r"\s+\)", ")", entry)
 
         if need_part_of_speech:
-            entry = '<i>' + word_type + '</i>' + entry
+            entry = '<i>' + word_type + '</i><br/>' + entry
 
         entry = BeautifulSoup(entry, 'html.parser').prettify()
 
@@ -400,7 +410,6 @@ if getattr(mw.addonManager, "getConfig", None):
             REPLACE_BY = extra['REPLACE_BY']
         if 'GOOGLESEARCH_APPEND' in extra:
             GOOGLESEARCH_APPEND = extra['GOOGLESEARCH_APPEND']
-
 
     if '2 shortcuts' in config:
         shortcuts = config['2 shortcuts']
