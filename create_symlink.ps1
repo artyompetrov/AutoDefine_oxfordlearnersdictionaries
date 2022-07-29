@@ -9,7 +9,7 @@ function Run-Elevated ([string]$scriptblock)
   $sh.ShellExecute('powershell', "-NoExit -Command $scriptblock", '', 'runas')
 }
 
-$addonPath = $env:APPDATA + '\Anki2\addons21\21570730390'
+$addonPath = $env:APPDATA + '\Anki2\addons21\570730390'
 
 if (Is-Symlink($addonPath))
 {
