@@ -1,6 +1,5 @@
 {
   "1 params": {
-    "DEBUG": false,
     "SOURCE_FIELD": 0,
     "DEFINITION_FIELD": 1,
     "OPEN_IMAGES_IN_BROWSER": false,
