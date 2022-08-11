@@ -21,6 +21,25 @@ from contextlib import contextmanager
 import pathlib
 
 
+SOURCE_FIELD = 0
+
+DEFINITION_FIELD = 1
+
+PRONUNCIATION_FIELD = 2
+
+OPEN_IMAGES_IN_BROWSER = True
+
+GOOGLESEARCH_APPEND = ""
+
+PRIMARY_SHORTCUT = "ctrl+alt+e"
+
+REPLACE_BY = '____'
+
+DEBUG = False
+
+PHONETICS = True
+
+
 @contextmanager
 def add_to_path(p):
     import sys
@@ -45,26 +64,6 @@ def path_import(name):
 
 
 nltk = path_import('nltk')
-
-SOURCE_FIELD = 0
-
-DEFINITION_FIELD = 1
-
-PRONUNCIATION_FIELD = 2
-
-OPEN_IMAGES_IN_BROWSER = True
-
-GOOGLESEARCH_APPEND = ""
-
-PRIMARY_SHORTCUT = "ctrl+alt+e"
-
-REPLACE_BY = '____'
-
-DEBUG = False
-
-PHONETICS = True
-
-
 ps = nltk.stem.PorterStemmer()
 tokinize = nltk.wordpunct_tokenize
 unify = ps.stem
@@ -133,7 +132,7 @@ def _get_data(editor):
     insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
 
     if PHONETICS:
-        phonetics = get_phonetics(articles[0])
+        phonetics = get_phonetics(articles)
         insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
 
     if found_word != word:
@@ -366,25 +365,42 @@ def get_definition_html(articles_list):
     return "<hr>".join(result)
 
 
-def get_phonetics(article):
-    data = article['data']
+def get_phonetics(articles):
+    phonetics_dict = {}
+    for article in articles:
+        data = article['data']
+        chosen_soup = BeautifulSoup(data, 'html.parser')
+        entry = chosen_soup.find('div', {"class": "entry"})
+        header = entry.find('div', {"class": "top-container"})
+        word_type = header.find('span', {"class": "pos"}).get_text()
+        phonetics = header.find('span', {"class": "phon"})
 
-    chosen_soup = BeautifulSoup(data, 'html.parser')
+        name_tags = phonetics.find_all('span', {"class": "name"})
+        for name_tag in name_tags:
+            name_tag.decompose()
 
-    phonetics = chosen_soup.find('span', {"class": "phon"})
+        separator_tags = phonetics.find_all('span', {"class": "separator"})
+        for separator_tag in separator_tags:
+            separator_tag.decompose()
 
-    name_tag = phonetics.find('span', {"class": "name"})
-    name_tag.decompose()
+        wrap_tags = phonetics.find_all('span', {"class": "wrap"})
+        for wrap_tag in wrap_tags:
+            wrap_tag.decompose()
 
-    separator_tags = phonetics.find_all('span', {"class": "separator"})
-    for separator_tags in separator_tags:
-        separator_tags.decompose()
+        phonetics = phonetics.get_text()
 
-    wrap_tags = phonetics.find_all('span', {"class": "wrap"})
-    for wrap_tags in wrap_tags:
-        wrap_tags.decompose()
+        value = phonetics_dict.get(phonetics, None)
+        if value is not None:
+            value.append(word_type)
+        else:
+            phonetics_dict[phonetics] = [word_type]
 
-    return "[" + phonetics.get_text() + "]"
+    if len(phonetics_dict) == 0:
+        return "No phonetics found"
+    elif len(phonetics_dict) == 1:
+        return '[' + next(iter(phonetics_dict)) + ']'
+    else:
+        return "<br/>".join(["[" + key + '] - ' + ", ".join(phonetics_dict[key]) for key in iter(phonetics_dict)])
 
 
 def clean_soup(content):
