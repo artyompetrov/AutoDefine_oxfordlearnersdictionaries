@@ -62,6 +62,9 @@ REPLACE_BY = '____'
 
 DEBUG = False
 
+PHONETICS = True
+
+
 ps = nltk.stem.PorterStemmer()
 tokinize = nltk.wordpunct_tokenize
 unify = ps.stem
@@ -72,9 +75,9 @@ HEADERS = {
 }
 
 
-def get_definition(editor):
+def get_data(editor):
     try:
-        editor.saveNow(lambda: _get_definition(editor))
+        editor.saveNow(lambda: _get_data(editor))
     except Exception as ex:
         raise Exception("Error occurred. Please copy this error massage and open an issue on "
                         "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues "
@@ -106,7 +109,7 @@ def get_word(editor):
     return word
 
 
-def _get_definition(editor):
+def _get_data(editor):
     validate_settings()
     word = get_word(editor)
     if word == "":
@@ -128,6 +131,10 @@ def _get_definition(editor):
     definition_html = get_definition_html(articles)
 
     insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
+
+    if PHONETICS:
+        phonetics = get_phonetics(articles[0])
+        insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
 
     if found_word != word:
         if askUser(f"Attention! found another word '{found_word}', replace source field?"):
@@ -359,6 +366,27 @@ def get_definition_html(articles_list):
     return "<hr>".join(result)
 
 
+def get_phonetics(article):
+    data = article['data']
+
+    chosen_soup = BeautifulSoup(data, 'html.parser')
+
+    phonetics = chosen_soup.find('span', {"class": "phon"})
+
+    name_tag = phonetics.find('span', {"class": "name"})
+    name_tag.decompose()
+
+    separator_tags = phonetics.find_all('span', {"class": "separator"})
+    for separator_tags in separator_tags:
+        separator_tags.decompose()
+
+    wrap_tags = phonetics.find_all('span', {"class": "wrap"})
+    for wrap_tags in wrap_tags:
+        wrap_tags.decompose()
+
+    return "[" + phonetics.get_text() + "]"
+
+
 def clean_soup(content):
     for attr in list(content.attrs):
         del content.attrs[attr]
@@ -392,7 +420,7 @@ def clean_html(raw_html):
 def setup_buttons(buttons, editor):
     both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
                                    cmd="AD",
-                                   func=get_definition,
+                                   func=get_data,
                                    tip="AutoDefine Word (%s)" %
                                        ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
                                    toggleable=False,
@@ -413,10 +441,14 @@ if getattr(mw.addonManager, "getConfig", None):
         extra = config['1 params']
         if 'DEBUG' in extra:
             DEBUG = extra['DEBUG']
+        if 'PHONETICS' in extra:
+            PHONETICS = extra['PHONETICS']
         if 'SOURCE_FIELD' in extra:
             SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
+        if 'PHONETICS_FIELD' in extra:
+            PHONETICS_FIELD = extra['PHONETICS_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:

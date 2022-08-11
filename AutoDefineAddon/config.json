@@ -1,7 +1,9 @@
 {
   "1 params": {
+    "PHONETICS": true,
     "SOURCE_FIELD": 0,
     "DEFINITION_FIELD": 1,
+    "PHONETICS_FIELD": 2,
     "OPEN_IMAGES_IN_BROWSER": false,
     "GOOGLESEARCH_APPEND": "",
     "REPLACE_BY": "____"
