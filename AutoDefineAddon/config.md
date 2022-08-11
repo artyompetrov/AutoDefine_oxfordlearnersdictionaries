@@ -1,5 +1,7 @@
 * `SOURCE_FIELD`: Index of field with defining word
 * `DEFINITION_FIELD`: Index of field to insert definitions into
+* `PHONETICS`: Add IPA to PHONETICS_FIELD
+* `PHONETICS_FIELD`: Index of field to insert phonetics into
 * `OPEN_IMAGES_IN_BROWSER`: Open a browser tab with an image search for the same word?
 * `GOOGLESEARCH_APPEND`: Append phrase when searching for images
 * `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.

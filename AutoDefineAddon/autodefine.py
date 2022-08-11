@@ -45,7 +45,7 @@ SOURCE_FIELD = 0
 
 DEFINITION_FIELD = 1
 
-PRONUNCIATION_FIELD = 2
+PHONETICS_FIELD = 2
 
 CORPUS = 'american_english'
 
@@ -59,6 +59,8 @@ REPLACE_BY = '____'
 
 DEBUG = False
 
+PHONETICS = True
+
 #from nltk.stem.wordnet import WordNetLemmatizer
 #lem = WordNetLemmatizer()
 from nltk.stem import PorterStemmer
@@ -69,9 +71,9 @@ unify = ps.stem
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36' }
 
 
-def get_definition(editor):
+def get_data(editor):
     try:
-        editor.saveNow(lambda: _get_definition(editor))
+        editor.saveNow(lambda: _get_data(editor))
     except Exception as ex:
         raise Exception("Error occurred. Please copy this error massage and open an issue on "
                         "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues "
@@ -103,7 +105,7 @@ def get_word(editor):
     return word
 
 
-def _get_definition(editor):
+def _get_data(editor):
     validate_settings()
     word = get_word(editor)
     if word == "":
@@ -117,9 +119,13 @@ def _get_definition(editor):
         for article in articles_list:
             insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>', DEFINITION_FIELD, overwrite=False)
 
-    to_return = get_article(articles_list)
+    definition = get_article(articles_list)
 
-    insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
+    insert_into_field(editor, definition, DEFINITION_FIELD, overwrite=False)
+
+    if PHONETICS:
+        phonetics = get_phonetics(articles_list[0])
+        insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open("https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
@@ -335,6 +341,27 @@ def get_article(articles_list):
     return "<hr>".join(result)
 
 
+def get_phonetics(article):
+    data = article['data']
+
+    chosen_soup = BeautifulSoup(data, 'html.parser')
+
+    phonetics = chosen_soup.find('span', {"class": "phon"})
+
+    name_tag = phonetics.find('span', {"class": "name"})
+    name_tag.decompose()
+    
+    separator_tags = phonetics.find_all('span', {"class": "separator"})
+    for separator_tags in separator_tags:
+        separator_tags.decompose()
+    
+    wrap_tags = phonetics.find_all('span', {"class": "wrap"})
+    for wrap_tags in wrap_tags:
+        wrap_tags.decompose()
+
+    return "[" + phonetics.get_text() + "]"
+
+
 def clean_soup(content):
     for attr in list(content.attrs):
         del content.attrs[attr]
@@ -368,7 +395,7 @@ def clean_html(raw_html):
 def setup_buttons(buttons, editor):
     both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
                                    cmd="AD",
-                                   func=get_definition,
+                                   func=get_data,
                                    tip="AutoDefine Word (%s)" %
                                        ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
                                    toggleable=False,
@@ -389,10 +416,14 @@ if getattr(mw.addonManager, "getConfig", None):
         extra = config['1 params']
         if 'DEBUG' in extra:
             DEBUG = extra['DEBUG']
+        if 'PHONETICS' in extra:
+            PHONETICS = extra['PHONETICS']
         if 'SOURCE_FIELD' in extra:
             SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
+        if 'PHONETICS_FIELD' in extra:
+            PHONETICS_FIELD = extra['PHONETICS_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:
