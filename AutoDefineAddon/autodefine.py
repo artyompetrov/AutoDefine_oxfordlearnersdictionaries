@@ -8,6 +8,7 @@
 
 import os
 import re
+import requests
 from anki.hooks import addHook
 from aqt import mw
 from aqt.utils import tooltip
@@ -17,6 +18,7 @@ from .webbrowser import webbrowser
 import importlib.util
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 @contextmanager
 def add_to_path(p):
@@ -47,6 +49,8 @@ DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
 
+AUDIO_FIELD = 3
+
 CORPUS = 'american_english'
 
 OPEN_IMAGES_IN_BROWSER = True
@@ -59,6 +63,8 @@ REPLACE_BY = '____'
 
 DEBUG = False
 
+AUDIO = True
+
 #from nltk.stem.wordnet import WordNetLemmatizer
 #lem = WordNetLemmatizer()
 from nltk.stem import PorterStemmer
@@ -69,9 +75,9 @@ unify = ps.stem
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36' }
 
 
-def get_definition(editor):
+def get_data(editor):
     try:
-        editor.saveNow(lambda: _get_definition(editor))
+        editor.saveNow(lambda: _get_data(editor))
     except Exception as ex:
         raise Exception("Error occurred. Please copy this error massage and open an issue on "
                         "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues "
@@ -103,7 +109,7 @@ def get_word(editor):
     return word
 
 
-def _get_definition(editor):
+def _get_data(editor):
     validate_settings()
     word = get_word(editor)
     if word == "":
@@ -117,9 +123,13 @@ def _get_definition(editor):
         for article in articles_list:
             insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>', DEFINITION_FIELD, overwrite=False)
 
-    to_return = get_article(articles_list)
+    definition = get_article(articles_list)
 
-    insert_into_field(editor, to_return, DEFINITION_FIELD, overwrite=False)
+    insert_into_field(editor, definition, DEFINITION_FIELD, overwrite=False)
+
+    if AUDIO:
+        audio = get_audio(articles_list[0])
+        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open("https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga", 0, False)
@@ -335,6 +345,27 @@ def get_article(articles_list):
     return "<hr>".join(result)
 
 
+def get_audio(article):
+    data = article['data']
+
+    chosen_soup = BeautifulSoup(data, 'html.parser')
+
+    audio_button = chosen_soup.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
+    audio_link = audio_button.attrs["data-src-mp3"]
+    audio_name = audio_link.split('/')[-1]
+
+    collection_path = Path(mw.col.path).parent.absolute()
+    media_path = os.path.join(collection_path, "collection.media")
+    audio_path = os.path.join(media_path, audio_name)
+
+    if(not os.path.exists(audio_path)):
+        response = requests.get(audio_link, headers=HEADERS)
+        with open(audio_path, 'wb') as f:
+            f.write(response.content)
+    
+    return f"[sound:{audio_name}]"
+
+
 def clean_soup(content):
     for attr in list(content.attrs):
         del content.attrs[attr]
@@ -368,7 +399,7 @@ def clean_html(raw_html):
 def setup_buttons(buttons, editor):
     both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
                                    cmd="AD",
-                                   func=get_definition,
+                                   func=get_data,
                                    tip="AutoDefine Word (%s)" %
                                        ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
                                    toggleable=False,
@@ -389,10 +420,14 @@ if getattr(mw.addonManager, "getConfig", None):
         extra = config['1 params']
         if 'DEBUG' in extra:
             DEBUG = extra['DEBUG']
+        if 'AUDIO' in extra:
+            AUDIO = extra['AUDIO']
         if 'SOURCE_FIELD' in extra:
             SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
+        if 'AUDIO_FIELD' in extra:
+            AUDIO_FIELD = extra['AUDIO_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:
