@@ -313,6 +313,10 @@ def get_definition_html(articles_list):
         for pron_g_tag in pron_g_tags:
             pron_g_tag.decompose()
 
+        xrefs_tags = entry.find_all('span', {"class": "xrefs"})
+        for xrefs_tag in xrefs_tags:
+            xrefs_tag.decompose()
+
         sn_g_tags = entry.find_all('li', {"class": "sn-g"})
         for sn_g_tag in sn_g_tags:
             cfs = sn_g_tag.find_all('span', {"class": "cf"}, recursive=False)
