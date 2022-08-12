@@ -8,6 +8,7 @@
 
 import os
 import re
+import requests
 from anki.hooks import addHook
 from aqt import mw
 from aqt.utils import tooltip
@@ -27,6 +28,8 @@ DEFINITION_FIELD = 1
 
 PRONUNCIATION_FIELD = 2
 
+AUDIO_FIELD = 3
+
 OPEN_IMAGES_IN_BROWSER = True
 
 GOOGLESEARCH_APPEND = ""
@@ -39,6 +42,8 @@ DEBUG = False
 
 PHONETICS = True
 
+AUDIO = True
+from pathlib import Path
 
 @contextmanager
 def add_to_path(p):
@@ -65,6 +70,7 @@ def path_import(name):
 
 nltk = path_import('nltk')
 ps = nltk.stem.PorterStemmer()
+
 tokinize = nltk.wordpunct_tokenize
 unify = ps.stem
 
@@ -139,6 +145,10 @@ def _get_data(editor):
         if askUser(f"Attention! found another word '{found_word}', replace source field?"):
             insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
             word = found_word
+
+    if AUDIO:
+        audio = get_audio(articles[0])
+        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
         webbrowser.open(
@@ -365,6 +375,27 @@ def get_definition_html(articles_list):
     return "<hr>".join(result)
 
 
+def get_audio(article):
+    data = article['data']
+
+    chosen_soup = BeautifulSoup(data, 'html.parser')
+
+    audio_button = chosen_soup.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
+    audio_link = audio_button.attrs["data-src-mp3"]
+    audio_name = audio_link.split('/')[-1]
+
+    collection_path = Path(mw.col.path).parent.absolute()
+    media_path = os.path.join(collection_path, "collection.media")
+    audio_path = os.path.join(media_path, audio_name)
+
+    if(not os.path.exists(audio_path)):
+        response = requests.get(audio_link, headers=HEADERS)
+        with open(audio_path, 'wb') as f:
+            f.write(response.content)
+
+    return f"[sound:{audio_name}]"
+
+
 def get_phonetics(articles):
     phonetics_dict = {}
     for article in articles:
@@ -459,12 +490,16 @@ if getattr(mw.addonManager, "getConfig", None):
             DEBUG = extra['DEBUG']
         if 'PHONETICS' in extra:
             PHONETICS = extra['PHONETICS']
+        if 'AUDIO' in extra:
+            AUDIO = extra['AUDIO']
         if 'SOURCE_FIELD' in extra:
             SOURCE_FIELD = extra['SOURCE_FIELD']
         if 'DEFINITION_FIELD' in extra:
             DEFINITION_FIELD = extra['DEFINITION_FIELD']
         if 'PHONETICS_FIELD' in extra:
             PHONETICS_FIELD = extra['PHONETICS_FIELD']
+        if 'AUDIO_FIELD' in extra:
+            AUDIO_FIELD = extra['AUDIO_FIELD']
         if 'OPEN_IMAGES_IN_BROWSER' in extra:
             OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
         if 'REPLACE_BY' in extra:
