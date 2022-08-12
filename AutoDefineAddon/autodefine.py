@@ -473,7 +473,6 @@ def insert_into_field(editor, text, field_id, overwrite=False):
     editor.loadNote()
 
 
-# via https://stackoverflow.com/a/12982689
 def clean_html(raw_html):
     return re.sub(re.compile('<.*?>'), '', raw_html).replace("&nbsp;", " ")
 
