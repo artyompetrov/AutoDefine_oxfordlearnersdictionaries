@@ -274,7 +274,7 @@ def get_definition_html(articles_list):
         xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
         for xr_gs_tag in xr_gs_tags:
             prefix = xr_gs_tag.find('span', {"class": "prefix"})
-            if prefix is not None and prefix.get_text() == 'see':
+            if prefix is not None and (prefix.get_text() == 'see' or prefix.get_text() == 'picture at'):
                 xr_gs_tag.decompose()
             else:
                 new_param = BeautifulSoup('<br>' + xr_gs_tag.decode_contents(), 'html.parser')
