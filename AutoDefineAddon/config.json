@@ -1,11 +1,11 @@
 {
   "1 params": {
-    "AUDIO": true,
     "SOURCE_FIELD": 0,
     "DEFINITION_FIELD": 1,
     "PHONETICS_FIELD": 2,
-    "PHONETICS": false,
     "AUDIO_FIELD": 3,
+    "PHONETICS": false,
+    "AUDIO": false,
     "OPEN_IMAGES_IN_BROWSER": false,
     "GOOGLESEARCH_APPEND": "",
     "REPLACE_BY": "____"

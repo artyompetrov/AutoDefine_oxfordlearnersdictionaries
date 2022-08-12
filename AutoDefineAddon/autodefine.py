@@ -8,7 +8,6 @@
 
 import os
 import re
-import requests
 from anki.hooks import addHook
 from aqt import mw
 from aqt.utils import tooltip
@@ -43,7 +42,7 @@ DEBUG = False
 PHONETICS = True
 
 AUDIO = True
-from pathlib import Path
+
 
 @contextmanager
 def add_to_path(p):
@@ -147,7 +146,7 @@ def _get_data(editor):
             word = found_word
 
     if AUDIO:
-        audio = get_audio(articles[0])
+        audio = get_audio(articles)
         insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
@@ -375,25 +374,41 @@ def get_definition_html(articles_list):
     return "<hr>".join(result)
 
 
-def get_audio(article):
-    data = article['data']
+def get_audio(articles):
+    audio_dict = {}
+    for article in articles:
+        data = article['data']
 
-    chosen_soup = BeautifulSoup(data, 'html.parser')
+        chosen_soup = BeautifulSoup(data, 'html.parser')
+        entry = chosen_soup.find('div', {"class": "entry"})
+        header = entry.find('div', {"class": "top-container"})
+        word_type = header.find('span', {"class": "pos"}).get_text()
 
-    audio_button = chosen_soup.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
-    audio_link = audio_button.attrs["data-src-mp3"]
-    audio_name = audio_link.split('/')[-1]
+        audio_button = header.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
+        audio_link = audio_button.attrs["data-src-mp3"]
+        audio_name = audio_link.split('/')[-1]
 
-    collection_path = Path(mw.col.path).parent.absolute()
-    media_path = os.path.join(collection_path, "collection.media")
-    audio_path = os.path.join(media_path, audio_name)
+        collection_path = pathlib.Path(mw.col.path).parent.absolute()
+        media_path = os.path.join(collection_path, "collection.media")
+        audio_path = os.path.join(media_path, audio_name)
 
-    if(not os.path.exists(audio_path)):
-        response = requests.get(audio_link, headers=HEADERS)
-        with open(audio_path, 'wb') as f:
-            f.write(response.content)
+        value = audio_dict.get(audio_name, None)
+        if value is not None:
+            value['word_types'].append(word_type)
+        else:
+            if not os.path.exists(audio_path):
+                response = requests.get(audio_link, headers=HEADERS)
+                with open(audio_path, 'wb') as f:
+                    f.write(response.content)
+            audio_dict[audio_name] = {'word_types': [word_type], "audio_name": audio_name}
 
-    return f"[sound:{audio_name}]"
+    if len(audio_dict) == 0:
+        return "No audio found"
+    elif len(audio_dict) == 1:
+        return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
+    else:
+        return "<br/>".join(["[sound:" + audio_dict[key]['audio_name'] + '] - ' +
+                             ", ".join(audio_dict[key]['word_types']) for key in iter(audio_dict)])
 
 
 def get_phonetics(articles):
