@@ -276,6 +276,9 @@ def get_definition_html(articles_list):
             prefix = xr_gs_tag.find('span', {"class": "prefix"})
             if prefix is not None and prefix.get_text() == 'see':
                 xr_gs_tag.decompose()
+            else:
+                new_param = BeautifulSoup('<br>' + xr_gs_tag.decode_contents(), 'html.parser')
+                xr_gs_tag.replaceWith(new_param)
 
         dr_gs_tags = entry.find_all('span', {"class": "dr-gs"})
         for dr_gs_tag in dr_gs_tags:
@@ -312,10 +315,6 @@ def get_definition_html(articles_list):
         pron_g_tags = entry.find_all('span', {"class": "pron-g"})
         for pron_g_tag in pron_g_tags:
             pron_g_tag.decompose()
-
-        xrefs_tags = entry.find_all('span', {"class": "xrefs"})
-        for xrefs_tag in xrefs_tags:
-            xrefs_tag.decompose()
 
         sn_g_tags = entry.find_all('li', {"class": "sn-g"})
         for sn_g_tag in sn_g_tags:
