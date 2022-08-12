@@ -88,10 +88,6 @@ def get_data(editor):
                         "so I could investigate the reason of error and fix it") from ex
 
 
-def validate_settings():
-    pass
-
-
 def focus_zero_field(editor):
     # no idea why, but sometimes web seems to be unavailable
     if editor.web:
@@ -114,7 +110,6 @@ def get_word(editor):
 
 
 def _get_data(editor):
-    validate_settings()
     word = get_word(editor)
     if word == "":
         tooltip("AutoDefine: No text found in note fields.")

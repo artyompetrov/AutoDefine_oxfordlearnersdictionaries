@@ -46,7 +46,7 @@ domains and tasks. The basic logic is this:
 import html
 from typing import List
 
-import regex  # https://github.com/nltk/nltk/issues/2409
+import re as regex  # https://github.com/nltk/nltk/issues/2409
 
 from nltk.tokenize.api import TokenizerI
 

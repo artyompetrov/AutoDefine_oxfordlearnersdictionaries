@@ -36,7 +36,7 @@ from nltk.util import trigrams
 # Unicode codepoint properties with the \p{} syntax.
 # You may have to "pip install regx"
 try:
-    import regex as re
+    import re as re
 except ImportError:
     re = None
 ######################################################################
