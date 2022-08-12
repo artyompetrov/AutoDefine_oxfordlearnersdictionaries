@@ -301,6 +301,10 @@ def get_definition_html(articles_list):
         for idm_gs_tag in idm_gs_tags:
             idm_gs_tag.decompose()
 
+        pv_gs_tags = entry.find_all('span', {"class": "pv-gs"})
+        for pv_gs_tag in pv_gs_tags:
+            pv_gs_tag.decompose()
+
         ox_enlarge_tags = entry.find_all('div', {"id": "ox-enlarge"})
         for ox_enlarge_tag in ox_enlarge_tags:
             ox_enlarge_tag.decompose()
