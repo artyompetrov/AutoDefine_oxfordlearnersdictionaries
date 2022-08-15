@@ -264,8 +264,12 @@ def get_definition_html(articles_list):
             ring_links_box_tag.decompose()
 
         dictlinks_tags = entry.find_all('span', {"class": "dictlinks"})
-        for dictlinks_tags in dictlinks_tags:
-            dictlinks_tags.decompose()
+        for dictlinks_tag in dictlinks_tags:
+            dictlinks_tag.decompose()
+
+        un_tags = entry.find_all('span', {"class": "un"})
+        for un_tag in un_tags:
+            un_tag.decompose()
 
         pron_link_tags = entry.find_all('div', {"class": "pron-link"})
         for pron_link_tag in pron_link_tags:
@@ -274,7 +278,7 @@ def get_definition_html(articles_list):
         xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
         for xr_gs_tag in xr_gs_tags:
             prefix = xr_gs_tag.find('span', {"class": "prefix"})
-            if prefix is not None and (prefix.get_text() == 'see' or prefix.get_text() == 'picture at'):
+            if prefix is not None and (prefix.get_text() in ['see', 'picture at', 'related noun', 'see also', 'compare']):
                 xr_gs_tag.decompose()
             else:
                 new_param = BeautifulSoup('<br>' + xr_gs_tag.decode_contents(), 'html.parser')
@@ -304,9 +308,24 @@ def get_definition_html(articles_list):
         for idm_gs_tag in idm_gs_tags:
             idm_gs_tag.decompose()
 
+        v_gs_tags = entry.find_all('span', {"class": "v-gs"})
+        for v_gs_tag in v_gs_tags:
+            v_gs_tag.decompose()
+
+        #phrasal verbs
         pv_gs_tags = entry.find_all('span', {"class": "pv-gs"})
         for pv_gs_tag in pv_gs_tags:
-            pv_gs_tag.decompose()
+            heading_tags = pv_gs_tag.find_all('span', {"class": "heading"})
+            for heading_tag in heading_tags:
+                heading_tag.decompose()
+            top_g_tags = pv_gs_tag.find_all('div', {"class": "top-g"})
+            for top_g_tag in top_g_tags:
+                link_right_tags = top_g_tag.find_all('a', {"class": "link-right"})
+                for link_right_tag in link_right_tags:
+                    link_right_tag.decompose()
+                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, top_g_tag.get_text()) + '</i><br/>',
+                                          'html.parser')
+                top_g_tag.replaceWith(new_param)
 
         ox_enlarge_tags = entry.find_all('div', {"id": "ox-enlarge"})
         for ox_enlarge_tag in ox_enlarge_tags:
@@ -384,9 +403,11 @@ def get_audio(articles):
         chosen_soup = BeautifulSoup(data, 'html.parser')
         entry = chosen_soup.find('div', {"class": "entry"})
         header = entry.find('div', {"class": "top-container"})
-        word_type = header.find('span', {"class": "pos"}).get_text()
-
         audio_button = header.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
+        if audio_button is None:
+            continue
+
+        word_type = header.find('span', {"class": "pos"}).get_text()
         audio_link = audio_button.attrs["data-src-mp3"]
         audio_name = audio_link.split('/')[-1]
 
@@ -420,9 +441,12 @@ def get_phonetics(articles):
         chosen_soup = BeautifulSoup(data, 'html.parser')
         entry = chosen_soup.find('div', {"class": "entry"})
         header = entry.find('div', {"class": "top-container"})
-        word_type = header.find('span', {"class": "pos"}).get_text()
         phonetics = header.find('span', {"class": "phon"})
 
+        if phonetics is None:
+            continue
+
+        word_type = header.find('span', {"class": "pos"}).get_text()
         name_tags = phonetics.find_all('span', {"class": "name"})
         for name_tag in name_tags:
             name_tag.decompose()
