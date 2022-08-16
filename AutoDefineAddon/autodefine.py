@@ -14,7 +14,7 @@ from aqt.utils import tooltip
 from aqt.utils import askUser
 from bs4 import BeautifulSoup
 import requests
-from .webbrowser import webbrowser
+import webbrowser
 import importlib.util
 import sys
 from contextlib import contextmanager

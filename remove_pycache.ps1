@@ -4,4 +4,3 @@ Get-ChildItem -Path $currentfolder -Directory -Include __pycache__ -Recurse | Re
 if (Test-Path ./meta.json) {
   Remove-Item ./meta.json
 }
-Compress-Archive -Path .\* -DestinationPath ..\to_publish.zip -Update
