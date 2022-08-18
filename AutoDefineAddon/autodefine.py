@@ -21,27 +21,32 @@ from contextlib import contextmanager
 import pathlib
 
 
-SOURCE_FIELD = 0
+if getattr(mw.addonManager, "getConfig", None):
+    CONFIG = mw.addonManager.getConfig(__name__)
 
-DEFINITION_FIELD = 1
 
-PRONUNCIATION_FIELD = 2
+def get_config_value(section_name, param_name, default):
+    value = default
+    if section_name in CONFIG:
+        section = CONFIG[section_name]
+        if param_name in section:
+            value = section[param_name]
+    return value
 
-AUDIO_FIELD = 3
 
-OPEN_IMAGES_IN_BROWSER = True
+DEBUG = get_config_value('1. params', "DEBUG", False)
+SOURCE_FIELD = get_config_value('1. params', " 1. SOURCE_FIELD", 0)
+DEFINITION_FIELD = get_config_value('1. params', " 2. DEFINITION_FIELD", 1)
+AUDIO = get_config_value('1. params', " 3. AUDIO", False)
+AUDIO_FIELD = get_config_value('1. params', " 4. AUDIO_FIELD", 2)
+PHONETICS = get_config_value('1. params', " 5. PHONETICS", False)
+PHONETICS_FIELD = get_config_value('1. params', " 6. PHONETICS_FIELD", 3)
+OPEN_IMAGES_IN_BROWSER = get_config_value('1. params', " 7. OPEN_IMAGES_IN_BROWSER", False)
+GOOGLESEARCH_APPEND = get_config_value('1. params', " 8. GOOGLESEARCH_APPEND", "")
+REPLACE_BY = get_config_value('1. params', " 9. REPLACE_BY", "____")
+CLEAN_HTML_IN_SOURCE_FIELD = get_config_value('1. params', "10. CLEAN_HTML_IN_SOURCE_FIELD", False)
 
-GOOGLESEARCH_APPEND = ""
-
-PRIMARY_SHORTCUT = "ctrl+alt+e"
-
-REPLACE_BY = '____'
-
-DEBUG = False
-
-PHONETICS = True
-
-AUDIO = True
+PRIMARY_SHORTCUT = get_config_value('2. shortcuts', " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
 
 
 @contextmanager
@@ -79,15 +84,6 @@ HEADERS = {
 }
 
 
-def get_data(editor):
-    try:
-        editor.saveNow(lambda: _get_data(editor))
-    except Exception as ex:
-        raise Exception("Error occurred. Please copy this error massage and open an issue on "
-                        "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues "
-                        "so I could investigate the reason of error and fix it") from ex
-
-
 def focus_zero_field(editor):
     # no idea why, but sometimes web seems to be unavailable
     if editor.web:
@@ -106,10 +102,14 @@ def get_word(editor):
             word = maybe_note.fields[SOURCE_FIELD]
 
     word = clean_html(word).strip()
+
+    if CLEAN_HTML_IN_SOURCE_FIELD:
+        insert_into_field(editor, word, SOURCE_FIELD, overwrite=True)
+
     return word
 
 
-def _get_data(editor):
+def get_data(editor):
     word = get_word(editor)
     if word == "":
         tooltip("AutoDefine: No text found in note fields.")
@@ -278,10 +278,13 @@ def get_definition_html(articles_list):
         xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
         for xr_gs_tag in xr_gs_tags:
             prefix = xr_gs_tag.find('span', {"class": "prefix"})
-            if prefix is not None and (prefix.get_text() in ['see', 'picture at', 'related noun', 'see also', 'compare']):
+            if prefix is not None and (
+                    prefix.get_text() in ['see', 'picture at', 'related noun', 'see also', 'compare']):
                 xr_gs_tag.decompose()
             else:
-                new_param = BeautifulSoup('<br>' + xr_gs_tag.decode_contents(), 'html.parser')
+                new_param = BeautifulSoup(
+                    '<br><i><font color="#6b6b6b" class="clean_ignore">' + xr_gs_tag.decode_contents()
+                    + '</font></i>', 'html.parser')
                 xr_gs_tag.replaceWith(new_param)
 
         dr_gs_tags = entry.find_all('span', {"class": "dr-gs"})
@@ -312,7 +315,7 @@ def get_definition_html(articles_list):
         for v_gs_tag in v_gs_tags:
             v_gs_tag.decompose()
 
-        #phrasal verbs
+        # phrasal verbs
         pv_gs_tags = entry.find_all('span', {"class": "pv-gs"})
         for pv_gs_tag in pv_gs_tags:
             heading_tags = pv_gs_tag.find_all('span', {"class": "heading"})
@@ -504,10 +507,19 @@ def clean_html(raw_html):
     return re.sub(re.compile('<.*?>'), '', raw_html).replace("&nbsp;", " ")
 
 
+def get_data_with_exception_handling(editor):
+    try:
+        get_data(editor)
+    except Exception as ex:
+        raise Exception("\n\nATTENTION! Please copy this error massage and open an issue on \n"
+                        "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues \n"
+                        "so I could investigate the reason of error and fix it") from ex
+
+
 def setup_buttons(buttons, editor):
     both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
                                    cmd="AD",
-                                   func=get_data,
+                                   func=lambda ed: ed.saveNow(lambda: get_data_with_exception_handling(ed)),
                                    tip="AutoDefine Word (%s)" %
                                        ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
                                    toggleable=False,
@@ -520,34 +532,3 @@ def setup_buttons(buttons, editor):
 
 
 addHook("setupEditorButtons", setup_buttons)
-
-if getattr(mw.addonManager, "getConfig", None):
-    config = mw.addonManager.getConfig(__name__)
-
-    if '1 params' in config:
-        extra = config['1 params']
-        if 'DEBUG' in extra:
-            DEBUG = extra['DEBUG']
-        if 'PHONETICS' in extra:
-            PHONETICS = extra['PHONETICS']
-        if 'AUDIO' in extra:
-            AUDIO = extra['AUDIO']
-        if 'SOURCE_FIELD' in extra:
-            SOURCE_FIELD = extra['SOURCE_FIELD']
-        if 'DEFINITION_FIELD' in extra:
-            DEFINITION_FIELD = extra['DEFINITION_FIELD']
-        if 'PHONETICS_FIELD' in extra:
-            PHONETICS_FIELD = extra['PHONETICS_FIELD']
-        if 'AUDIO_FIELD' in extra:
-            AUDIO_FIELD = extra['AUDIO_FIELD']
-        if 'OPEN_IMAGES_IN_BROWSER' in extra:
-            OPEN_IMAGES_IN_BROWSER = extra['OPEN_IMAGES_IN_BROWSER']
-        if 'REPLACE_BY' in extra:
-            REPLACE_BY = extra['REPLACE_BY']
-        if 'GOOGLESEARCH_APPEND' in extra:
-            GOOGLESEARCH_APPEND = extra['GOOGLESEARCH_APPEND']
-
-    if '2 shortcuts' in config:
-        shortcuts = config['2 shortcuts']
-        if 'PRIMARY_SHORTCUT' in shortcuts:
-            PRIMARY_SHORTCUT = shortcuts['PRIMARY_SHORTCUT']

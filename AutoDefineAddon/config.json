@@ -1,16 +1,17 @@
 {
-  "1 params": {
-    "SOURCE_FIELD": 0,
-    "DEFINITION_FIELD": 1,
-    "PHONETICS_FIELD": 2,
-    "AUDIO_FIELD": 3,
-    "PHONETICS": false,
-    "AUDIO": false,
-    "OPEN_IMAGES_IN_BROWSER": false,
-    "GOOGLESEARCH_APPEND": "",
-    "REPLACE_BY": "____"
+  "1. params": {
+    " 1. SOURCE_FIELD": 0,
+    " 2. DEFINITION_FIELD": 1,
+    " 3. AUDIO": false,
+    " 4. AUDIO_FIELD": 2,
+    " 5. PHONETICS": false,
+    " 6. PHONETICS_FIELD": 3,
+    " 7. OPEN_IMAGES_IN_BROWSER": false,
+    " 8. GOOGLESEARCH_APPEND": "",
+    " 9. REPLACE_BY": "____",
+    "10. CLEAN_HTML_IN_SOURCE_FIELD": false
   },
-  "2 shortcuts": {
-    "PRIMARY_SHORTCUT": "ctrl+alt+e"
+  "2. shortcuts": {
+    "1. PRIMARY_SHORTCUT": "ctrl+alt+e"
   }
 }
