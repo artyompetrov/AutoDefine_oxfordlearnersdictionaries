@@ -45,6 +45,8 @@ OPEN_IMAGES_IN_BROWSER = get_config_value('1. params', " 7. OPEN_IMAGES_IN_BROWS
 GOOGLESEARCH_APPEND = get_config_value('1. params', " 8. GOOGLESEARCH_APPEND", "")
 REPLACE_BY = get_config_value('1. params', " 9. REPLACE_BY", "____")
 CLEAN_HTML_IN_SOURCE_FIELD = get_config_value('1. params', "10. CLEAN_HTML_IN_SOURCE_FIELD", False)
+OPEN_IMAGES_IN_BROWSER_LINK = get_config_value('1. params', "11. OPEN_IMAGES_IN_BROWSER_LINK", "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
+
 
 PRIMARY_SHORTCUT = get_config_value('2. shortcuts', " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
 
@@ -145,8 +147,9 @@ def get_data(editor):
         insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     if OPEN_IMAGES_IN_BROWSER:
+        link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + GOOGLESEARCH_APPEND)
         webbrowser.open(
-            "https://www.google.com/search?q= " + word + GOOGLESEARCH_APPEND + "&safe=off&tbm=isch&tbs=isz:lt,islt:xga",
+            link,
             0, False)
 
     focus_zero_field(editor)
@@ -224,7 +227,7 @@ def get_links_to_articles(request_word):
         return False, None, None
     else:
         result_link = result_link.split("?")[0].split("#")[0]
-        found_word = result_link.split('/')[-1].split('_')[0]
+        found_word = result_link.split('/')[-1].split('_')[0].replace("-", " ")
         results.append({'link': result_link, 'data': data})
         pattern = r"_(\d+)$"
         if re.search(pattern, result_link):

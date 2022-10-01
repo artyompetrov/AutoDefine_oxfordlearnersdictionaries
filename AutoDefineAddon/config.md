@@ -12,3 +12,4 @@ Config structure have recently changed, if you updated the addon press Restore D
 * `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.
 * `REPLACE_BY`: Replace learning words in examples (use $ sign to insert replacing word itself)
 * `CLEAN_HTML_IN_SOURCE_FIELD`: Remove html tags from source field
+* `OPEN_IMAGES_IN_BROWSER_LINK`: Images search link, $ sign will be replaced by the defining word

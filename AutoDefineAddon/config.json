@@ -9,7 +9,8 @@
     " 7. OPEN_IMAGES_IN_BROWSER": false,
     " 8. GOOGLESEARCH_APPEND": "",
     " 9. REPLACE_BY": "____",
-    "10. CLEAN_HTML_IN_SOURCE_FIELD": false
+    "10. CLEAN_HTML_IN_SOURCE_FIELD": false,
+    "11. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X"
   },
   "2. shortcuts": {
     "1. PRIMARY_SHORTCUT": "ctrl+alt+e"
