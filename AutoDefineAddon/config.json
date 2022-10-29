@@ -7,10 +7,14 @@
     " 5. PHONETICS": false,
     " 6. PHONETICS_FIELD": 3,
     " 7. OPEN_IMAGES_IN_BROWSER": false,
-    " 8. GOOGLESEARCH_APPEND": "",
+    " 8. SEARCH_APPEND": "",
     " 9. REPLACE_BY": "____",
     "10. CLEAN_HTML_IN_SOURCE_FIELD": false,
-    "11. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X"
+    "11. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X",
+    "11. or use this link instead": "https://www.istockphoto.com/search/2/image?phrase=$",
+    "12. CORPUS": "American",
+    "13. MAX_EXAMPLES_COUNT_PER_DEFINITION": 3,
+    "14. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH": 3
   },
   "2. shortcuts": {
     "1. PRIMARY_SHORTCUT": "ctrl+alt+e"

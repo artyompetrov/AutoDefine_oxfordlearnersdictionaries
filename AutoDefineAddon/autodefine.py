@@ -2,9 +2,12 @@
 # Auto-defines words using Oxford Learner's Dictionaries, optionally adding images.
 # Copyright (c) Artem Petrov    apsapetrov@gmail.com
 # https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries Licensed under GPL v2
-# forked from:
+
+# Initially was forked from
 # Copyright (c) Robert Sanek    robertsanek.com    rsanek@gmail.com
 # https://github.com/z1lc/AutoDefine                      Licensed under GPL v2
+#
+# Then was completely overwritten
 
 import os
 import re
@@ -19,7 +22,8 @@ import importlib.util
 import sys
 from contextlib import contextmanager
 import pathlib
-
+from .oxford import Word, WordNotFound
+from http import cookiejar
 
 if getattr(mw.addonManager, "getConfig", None):
     CONFIG = mw.addonManager.getConfig(__name__)
@@ -27,14 +31,14 @@ if getattr(mw.addonManager, "getConfig", None):
 
 def get_config_value(section_name, param_name, default):
     value = default
-    if section_name in CONFIG:
-        section = CONFIG[section_name]
-        if param_name in section:
-            value = section[param_name]
+    if CONFIG is not None:
+        if section_name in CONFIG:
+            section = CONFIG[section_name]
+            if param_name in section:
+                value = section[param_name]
     return value
 
 
-DEBUG = get_config_value('1. params', "DEBUG", False)
 SOURCE_FIELD = get_config_value('1. params', " 1. SOURCE_FIELD", 0)
 DEFINITION_FIELD = get_config_value('1. params', " 2. DEFINITION_FIELD", 1)
 AUDIO = get_config_value('1. params', " 3. AUDIO", False)
@@ -42,13 +46,27 @@ AUDIO_FIELD = get_config_value('1. params', " 4. AUDIO_FIELD", 2)
 PHONETICS = get_config_value('1. params', " 5. PHONETICS", False)
 PHONETICS_FIELD = get_config_value('1. params', " 6. PHONETICS_FIELD", 3)
 OPEN_IMAGES_IN_BROWSER = get_config_value('1. params', " 7. OPEN_IMAGES_IN_BROWSER", False)
-GOOGLESEARCH_APPEND = get_config_value('1. params', " 8. GOOGLESEARCH_APPEND", "")
+SEARCH_APPEND = get_config_value('1. params', " 8. SEARCH_APPEND", "")
 REPLACE_BY = get_config_value('1. params', " 9. REPLACE_BY", "____")
 CLEAN_HTML_IN_SOURCE_FIELD = get_config_value('1. params', "10. CLEAN_HTML_IN_SOURCE_FIELD", False)
 OPEN_IMAGES_IN_BROWSER_LINK = get_config_value('1. params', "11. OPEN_IMAGES_IN_BROWSER_LINK", "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
-
+CORPUS = get_config_value('1. params', "12. CORPUS", "American")
+MAX_EXAMPLES_COUNT_PER_DEFINITION = get_config_value('1. params', "13. MAX_EXAMPLES_COUNT_PER_DEFINITION", 3)
+MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH = get_config_value('1. params', "14. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH", 3)
 
 PRIMARY_SHORTCUT = get_config_value('2. shortcuts', " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
+
+
+CORPUS_TAG = 'nAmE'
+if CORPUS.lower() == 'British':
+    CORPUS_TAG = 'BrE'
+
+
+class BlockAll(cookiejar.CookiePolicy):
+    """ policy to block cookies """
+    return_ok = set_ok = domain_return_ok = path_return_ok = lambda self, *args, **kwargs: False
+    netscape = True
+    rfc2965 = hide_cookie2 = False
 
 
 @contextmanager
@@ -104,56 +122,12 @@ def get_word(editor):
             word = maybe_note.fields[SOURCE_FIELD]
 
     word = clean_html(word).strip()
+    word = re.sub(r"\s+", " ", word)
 
     if CLEAN_HTML_IN_SOURCE_FIELD:
         insert_into_field(editor, word, SOURCE_FIELD, overwrite=True)
 
     return word
-
-
-def get_data(editor):
-    word = get_word(editor)
-    if word == "":
-        tooltip("AutoDefine: No text found in note fields.")
-        return
-
-    is_successful, found_word, articles = get_links_to_articles(word)
-
-    if not is_successful:
-        tooltip(f"Word '{word}' not found.")
-        return
-
-    insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
-    if DEBUG:
-        for article in articles:
-            insert_into_field(editor, '<a href="' + article['link'] + '">' + article['link'] + '</a><br/>',
-                              DEFINITION_FIELD, overwrite=False)
-
-    definition_html = get_definition_html(articles)
-
-    insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
-
-    if PHONETICS:
-        phonetics = get_phonetics(articles)
-        insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
-
-    if found_word != word:
-        if askUser(f"Attention! found another word '{found_word}', replace source field?"):
-            insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
-            word = found_word
-
-    if AUDIO:
-        audio = get_audio(articles)
-        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
-
-    if OPEN_IMAGES_IN_BROWSER:
-        link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + GOOGLESEARCH_APPEND)
-        webbrowser.open(
-            link,
-            0, False)
-
-    focus_zero_field(editor)
-
 
 def nltk_token_spans(txt):
     tokens = tokinize(txt)
@@ -166,11 +140,11 @@ def nltk_token_spans(txt):
         offset = next_offset
 
 
-def replace_word_in_example(words, example):
+def replace_word_in_sentence(words, sentence, highlight):
     words_to_replace = [unify(str.lower(word)) for word in tokinize(words)]
 
     result = str()
-    spans = list(nltk_token_spans(example))
+    spans = list(nltk_token_spans(sentence))
 
     replaced_anything = False
     position = 0
@@ -210,268 +184,137 @@ def replace_word_in_example(words, example):
             result += token
             position += 1
 
-    if not replaced_anything:
-        result = '<font color="#0000ff" class="clean_ignore">' + result + '</font>'
+    if not replaced_anything and highlight:
+        result = '<font color="blue">' + result + '</font>'
 
     return result
 
 
-def get_links_to_articles(request_word):
-    request_word = request_word.replace(' ', '-')
-    url = f'https://www.oxfordlearnersdictionaries.com/search/american_english/?q={request_word}'
-    response = requests.get(url, headers=HEADERS)
-    data = response.content
-    result_link = response.url
-    results = list()
-    if 'spellcheck' in result_link:
-        return False, None, None
-    else:
-        result_link = result_link.split("?")[0].split("#")[0]
-        found_word = result_link.split('/')[-1].split('_')[0].replace("-", " ")
-        results.append({'link': result_link, 'data': data})
-        pattern = r"_(\d+)$"
-        if re.search(pattern, result_link):
-            max_attempts = 5
-            try_count = 1
-            while try_count < max_attempts:
-                try_count += 1
-                maybe_result_link = re.sub(pattern, "_" + str(try_count), result_link)
-                response = requests.get(maybe_result_link, headers=HEADERS)
-                data = response.content
-                if 'Word not found in the dictionary' in str(data):
-                    break
-                else:
-                    results.append({'link': maybe_result_link, 'data': data})
+def get_data(editor):
+    word = get_word(editor)
+    if word == "":
+        tooltip("AutoDefine: No text found in note fields.")
+        return
 
-        return True, found_word, results
+    words_info = get_words_info(word)
 
+    if len(words_info) == 0:
+        tooltip(f"Word '{word}' not found.")
+        return
 
-def get_definition_html(articles_list):
-    need_part_of_speech = len(articles_list) > 1
-    result = list()
-    for article in articles_list:
-        data = article['data']
+    insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
 
-        chosen_soup = BeautifulSoup(data, 'html.parser')
+    definition_html = get_definition_html(words_info)
+    insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
 
-        entry = chosen_soup.find('div', {"class": "entry"})
+    if PHONETICS:
+        phonetics = get_phonetics(words_info)
+        insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
 
-        header = entry.find('div', {"class": "top-container"})
-        word = header.find('h2', {"class": "h"}).get_text()
-        word_type = header.find('span', {"class": "pos"}).get_text()
-        header.decompose()
+    if AUDIO:
+        audio = get_audio(words_info)
+        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
-        # tags to delete
-        ring_links_box_tags = entry.find_all('div', {"id": "ring-links-box"})
-        for ring_links_box_tag in ring_links_box_tags:
-            ring_links_box_tag.decompose()
+    found_word = get_word_name(words_info)
+    if found_word != word:
+        if askUser(f"Attention! found another word '{found_word}', replace source field?"):
+            insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
+            word = found_word
 
-        dictlinks_tags = entry.find_all('span', {"class": "dictlinks"})
-        for dictlinks_tag in dictlinks_tags:
-            dictlinks_tag.decompose()
+    if OPEN_IMAGES_IN_BROWSER:
+        link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + SEARCH_APPEND)
+        webbrowser.open(
+            link,
+            0, False)
 
-        un_tags = entry.find_all('span', {"class": "un"})
-        for un_tag in un_tags:
-            un_tag.decompose()
-
-        pron_link_tags = entry.find_all('div', {"class": "pron-link"})
-        for pron_link_tag in pron_link_tags:
-            pron_link_tag.decompose()
-
-        xr_gs_tags = entry.find_all('span', {"class": "xr-gs"})
-        for xr_gs_tag in xr_gs_tags:
-            prefix = xr_gs_tag.find('span', {"class": "prefix"})
-            if prefix is not None and (
-                    prefix.get_text() in ['see', 'picture at', 'related noun', 'see also', 'compare']):
-                xr_gs_tag.decompose()
-            else:
-                new_param = BeautifulSoup(
-                    '<br><i><font color="#6b6b6b" class="clean_ignore">' + xr_gs_tag.decode_contents()
-                    + '</font></i>', 'html.parser')
-                xr_gs_tag.replaceWith(new_param)
-
-        dr_gs_tags = entry.find_all('span', {"class": "dr-gs"})
-        for dr_gs_tag in dr_gs_tags:
-            dr_gs_tag.decompose()
-
-        collapse_tags = entry.find_all('span', {"class": "collapse"})
-        for collapse_tag in collapse_tags:
-            collapse_tag.decompose()
-
-        gram_g_tags = entry.find_all('span', {"class": "gram-g"})
-        for gram_g_tag in gram_g_tags:
-            gram_g_tag.decompose()
-
-        num_tags = entry.find_all('span', {"class": "num"})
-        for num_tag in num_tags:
-            num_tag.decompose()
-
-        script_tags = entry.find_all('script')
-        for script_tag in script_tags:
-            script_tag.decompose()
-
-        idm_gs_tags = entry.find_all('span', {"class": "idm-gs"})
-        for idm_gs_tag in idm_gs_tags:
-            idm_gs_tag.decompose()
-
-        v_gs_tags = entry.find_all('span', {"class": "v-gs"})
-        for v_gs_tag in v_gs_tags:
-            v_gs_tag.decompose()
-
-        # phrasal verbs
-        pv_gs_tags = entry.find_all('span', {"class": "pv-gs"})
-        for pv_gs_tag in pv_gs_tags:
-            heading_tags = pv_gs_tag.find_all('span', {"class": "heading"})
-            for heading_tag in heading_tags:
-                heading_tag.decompose()
-            top_g_tags = pv_gs_tag.find_all('div', {"class": "top-g"})
-            for top_g_tag in top_g_tags:
-                link_right_tags = top_g_tag.find_all('a', {"class": "link-right"})
-                for link_right_tag in link_right_tags:
-                    link_right_tag.decompose()
-                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, top_g_tag.get_text()) + '</i><br/>',
-                                          'html.parser')
-                top_g_tag.replaceWith(new_param)
-
-        ox_enlarge_tags = entry.find_all('div', {"id": "ox-enlarge"})
-        for ox_enlarge_tag in ox_enlarge_tags:
-            ox_enlarge_tag.decompose()
-
-        pron_g_tags = entry.find_all('span', {"class": "pron-g"})
-        for pron_g_tag in pron_g_tags:
-            pron_g_tag.decompose()
-
-        sn_g_tags = entry.find_all('li', {"class": "sn-g"})
-        for sn_g_tag in sn_g_tags:
-            cfs = sn_g_tag.find_all('span', {"class": "cf"}, recursive=False)
-            for cf in cfs:
-                new_param = BeautifulSoup('<i>' + replace_word_in_example(word, cf.get_text()) + '</i><br/>',
-                                          'html.parser')
-                cf.replaceWith(new_param)
-
-        # examples
-        x_g_tags = entry.find_all('span', {"class": "x-g"})
-        for x_g in x_g_tags:
-            cfs = x_g.find_all('span', {"class": "cf"})
-            for cf in cfs:
-                cf.decompose()
-            new_param = BeautifulSoup('<li>' + replace_word_in_example(word, x_g.get_text()) + '</li>', 'html.parser')
-            x_g.replaceWith(new_param)
-
-        x_gs_tags = entry.find_all('span', {"class": "x-gs"})
-        for x_g in x_gs_tags:
-            new_param = BeautifulSoup('<ul>' + x_g.decode_contents() + '</ul>', 'html.parser')
-            x_g.replaceWith(new_param)
-
-        # hr
-        shcut_tags = entry.find_all('span', {"class": "shcut"})
-        for shcut_tag in shcut_tags[:1]:
-            new_param = BeautifulSoup('<i>' + shcut_tag.get_text() + '</i>', 'html.parser')
-            shcut_tag.replaceWith(new_param)
-        for shcut_tag in shcut_tags[1:]:
-            new_param = BeautifulSoup('<hr/><i>' + shcut_tag.get_text() + '</i>', 'html.parser')
-            shcut_tag.replaceWith(new_param)
-
-        # unwrap
-        for match in entry.find_all('span'):
-            match.unwrap()
-
-        for match in entry.find_all('div'):
-            match.unwrap()
-
-        for match in entry.find_all('strong'):
-            match.unwrap()
-
-        for ol in entry.find_all('ol'):
-            new_param = BeautifulSoup('<ul>' + ol.decode_contents() + '</ul>', 'html.parser')
-            ol.replaceWith(new_param)
-
-        entry = clean_soup(entry).decode_contents()
-
-        entry = re.sub(r"\(\s+", "(", entry)
-        entry = re.sub(r"\s+\)", ")", entry)
-
-        if need_part_of_speech:
-            entry = '<i>' + word_type + '</i><br/>' + entry
-
-        entry = BeautifulSoup(entry, 'html.parser').prettify()
-
-        result.append(entry)
-
-    return "<hr>".join(result)
+    focus_zero_field(editor)
 
 
-def get_audio(articles):
-    audio_dict = {}
-    for article in articles:
-        data = article['data']
+def get_words_info(request_word):
+    words_info = []
+    word_to_search = request_word.replace(" ", "-").lower()
 
-        chosen_soup = BeautifulSoup(data, 'html.parser')
-        entry = chosen_soup.find('div', {"class": "entry"})
-        header = entry.find('div', {"class": "top-container"})
-        audio_button = header.find('div', {"class": "sound audio_play_button pron-usonly icon-audio"})
-        if audio_button is None:
-            continue
+    Word.get(word_to_search, HEADERS)
 
-        word_type = header.find('span', {"class": "pos"}).get_text()
-        audio_link = audio_button.attrs["data-src-mp3"]
-        audio_name = audio_link.split('/')[-1]
+    word_info = Word.info()
+    name = word_info["name"].strip()
+    words_info.append(word_info)
 
-        collection_path = pathlib.Path(mw.col.path).parent.absolute()
-        media_path = os.path.join(collection_path, "collection.media")
-        audio_path = os.path.join(media_path, audio_name)
-
-        value = audio_dict.get(audio_name, None)
-        if value is not None:
-            value['word_types'].append(word_type)
-        else:
-            if not os.path.exists(audio_path):
-                response = requests.get(audio_link, headers=HEADERS)
-                with open(audio_path, 'wb') as f:
-                    f.write(response.content)
-            audio_dict[audio_name] = {'word_types': [word_type], "audio_name": audio_name}
-
-    if len(audio_dict) == 0:
-        return "No audio found"
-    elif len(audio_dict) == 1:
-        return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
-    else:
-        return "<br/>".join(["[sound:" + audio_dict[key]['audio_name'] + '] - ' +
-                             ", ".join(audio_dict[key]['word_types']) for key in iter(audio_dict)])
+    for i in range(2, 5):
+        try:
+            Word.get(word_to_search + "_" + str(i), HEADERS)
+            word_info_2 = Word.info()
+            if word_info_2["name"].strip() == name:
+                words_info.append(word_info_2)
+        except WordNotFound:
+            return words_info
+    return words_info
 
 
-def get_phonetics(articles):
+def get_word_name(word_infos):
+    for word_info in word_infos:
+        return word_info["name"]
+
+
+def get_definition_html(word_infos):
+    strings = []
+    for word_info in word_infos:
+        word = word_info["name"]
+        wordform = word_info.get("wordform")
+        if wordform is not None:
+            strings.append('<i>' + wordform + '</i>')
+
+        definitions_by_namespaces = word_info["definitions"]
+
+        definitions = []
+        for definition_by_namespace in definitions_by_namespaces:
+            for definition in definition_by_namespace["definitions"]:
+                definitions.append(definition)
+
+        if MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH is not False:
+            definitions = definitions[0:MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH]
+
+        for definition in definitions:
+            maybe_description = definition.get("description")
+            if maybe_description is not None:
+                description = replace_word_in_sentence(word, maybe_description, False)
+                strings.append('<div><b>' + description + '</b></div>')
+
+            examples = definition.get("examples", []) + definition.get("extra_example", [])
+
+            if MAX_EXAMPLES_COUNT_PER_DEFINITION is not False:
+                examples = examples[0:MAX_EXAMPLES_COUNT_PER_DEFINITION]
+
+            if len(examples) > 0:
+                strings.append('<ul>')
+                for example in examples:
+                    example_clean = replace_word_in_sentence(word, example, True)
+                    strings.append('<li>' + example_clean + '</li>')
+                strings.append('</ul>')
+
+        strings.append('<hr/>')
+
+    del strings[-1]
+
+    return BeautifulSoup(''.join(strings), 'html.parser').prettify()
+
+
+def get_phonetics(word_infos):
     phonetics_dict = {}
-    for article in articles:
-        data = article['data']
-        chosen_soup = BeautifulSoup(data, 'html.parser')
-        entry = chosen_soup.find('div', {"class": "entry"})
-        header = entry.find('div', {"class": "top-container"})
-        phonetics = header.find('span', {"class": "phon"})
+    for word_info in word_infos:
+        wordform = word_info.get("wordform")
+        if wordform is None:
+            wordform = "none"
+        pronunciations = word_info.get("pronunciations")
+        for pronunciation in pronunciations:
+            if CORPUS_TAG == pronunciation["prefix"]:
+                phonetics = pronunciation["ipa"].replace('/', "")
 
-        if phonetics is None:
-            continue
-
-        word_type = header.find('span', {"class": "pos"}).get_text()
-        name_tags = phonetics.find_all('span', {"class": "name"})
-        for name_tag in name_tags:
-            name_tag.decompose()
-
-        separator_tags = phonetics.find_all('span', {"class": "separator"})
-        for separator_tag in separator_tags:
-            separator_tag.decompose()
-
-        wrap_tags = phonetics.find_all('span', {"class": "wrap"})
-        for wrap_tag in wrap_tags:
-            wrap_tag.decompose()
-
-        phonetics = phonetics.get_text()
-
-        value = phonetics_dict.get(phonetics, None)
-        if value is not None:
-            value.append(word_type)
-        else:
-            phonetics_dict[phonetics] = [word_type]
+                value = phonetics_dict.get(phonetics, None)
+                if value is not None:
+                    value.append(wordform)
+                else:
+                    phonetics_dict[phonetics] = [wordform]
 
     if len(phonetics_dict) == 0:
         return "No phonetics found"
@@ -481,16 +324,42 @@ def get_phonetics(articles):
         return "<br/>".join(["[" + key + '] - ' + ", ".join(phonetics_dict[key]) for key in iter(phonetics_dict)])
 
 
-def clean_soup(content):
-    for attr in list(content.attrs):
-        del content.attrs[attr]
-    for tags in content.find_all():
-        if tags.has_attr('class') and 'clean_ignore' in tags['class']:
-            continue
+def get_audio(word_infos):
+    audio_dict = {}
+    for word_info in word_infos:
+        wordform = word_info.get("wordform")
+        if wordform is None:
+            wordform = "none"
+        pronunciations = word_info.get("pronunciations")
+        for pronunciation in pronunciations:
+            if CORPUS_TAG == pronunciation["prefix"]:
+                audio_url = pronunciation["url"]
 
-        for val in list(tags.attrs):
-            del tags.attrs[val]
-    return content
+                audio_name = audio_url.split('/')[-1]
+
+                collection_path = pathlib.Path(mw.col.path).parent.absolute()
+                media_path = os.path.join(collection_path, "collection.media")
+                audio_path = os.path.join(media_path, audio_name)
+
+                value = audio_dict.get(audio_name, None)
+                if value is not None:
+                    value['wordform'].append(wordform)
+                else:
+                    if not os.path.exists(audio_path):
+                        req = requests.Session()
+                        req.cookies.set_policy(BlockAll())
+                        response = req.get(audio_url, timeout=5, headers={'User-agent': 'mother animal'})
+                        with open(audio_path, 'wb') as f:
+                            f.write(response.content)
+                    audio_dict[audio_name] = {'wordform': [wordform], "audio_name": audio_name}
+
+    if len(audio_dict) == 0:
+        return "No audio found"
+    elif len(audio_dict) == 1:
+        return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
+    else:
+        return "<br/>".join(["[sound:" + audio_dict[key]['audio_name'] + '] - ' +
+                             ", ".join(audio_dict[key]['wordform']) for key in iter(audio_dict)])
 
 
 def insert_into_field(editor, text, field_id, overwrite=False):
