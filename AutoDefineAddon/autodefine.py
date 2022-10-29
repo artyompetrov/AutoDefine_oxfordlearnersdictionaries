@@ -56,10 +56,12 @@ MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH = get_config_value('1. params', "14. MA
 
 PRIMARY_SHORTCUT = get_config_value('2. shortcuts', " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
 
-
-CORPUS_TAG = 'nAmE'
-if CORPUS.lower() == 'British':
+if CORPUS.lower() == 'british':
     CORPUS_TAG = 'BrE'
+elif CORPUS.lower() == 'american':
+    CORPUS_TAG = 'nAmE'
+else:
+    raise Exception("Unknown CORPUS " + CORPUS)
 
 
 class BlockAll(cookiejar.CookiePolicy):
