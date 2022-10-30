@@ -235,21 +235,21 @@ def get_data(editor):
 def get_words_info(request_word):
     words_info = []
     word_to_search = request_word.replace(" ", "-").lower()
+    try:
+        Word.get(word_to_search, HEADERS)
 
-    Word.get(word_to_search, HEADERS)
+        word_info = Word.info()
+        name = word_info["name"].strip()
+        words_info.append(word_info)
 
-    word_info = Word.info()
-    name = word_info["name"].strip()
-    words_info.append(word_info)
-
-    for i in range(2, 5):
-        try:
+        for i in range(2, 5):
             Word.get(word_to_search + "_" + str(i), HEADERS)
             word_info_2 = Word.info()
             if word_info_2["name"].strip() == name:
                 words_info.append(word_info_2)
-        except WordNotFound:
-            return words_info
+
+    except WordNotFound:
+        pass
     return words_info
 
 
