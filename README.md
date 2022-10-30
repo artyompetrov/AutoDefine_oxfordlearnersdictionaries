@@ -14,4 +14,6 @@ Only tested on Anki 2.1.x.
 
 Code licensed under GPLv2
 
-Based on https://github.com/z1lc/AutoDefine
+Originally was based on https://github.com/z1lc/AutoDefine but then was overwritten
+
+Uses https://github.com/NearHuscarl/oxford-dictionary-api
