@@ -1,22 +1,29 @@
 {
-  "1. params": {
+  "1. word": {
     " 1. SOURCE_FIELD": 0,
-    " 2. DEFINITION_FIELD": 1,
-    " 3. AUDIO": false,
-    " 4. AUDIO_FIELD": 2,
-    " 5. PHONETICS": false,
-    " 6. PHONETICS_FIELD": 3,
-    " 7. OPEN_IMAGES_IN_BROWSER": false,
-    " 8. SEARCH_APPEND": "",
-    " 9. REPLACE_BY": "____",
-    "10. CLEAN_HTML_IN_SOURCE_FIELD": false,
-    "11. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X",
-    "11. or use this link instead": "https://www.istockphoto.com/search/2/image?phrase=$",
-    "12. CORPUS": "American",
-    "13. MAX_EXAMPLES_COUNT_PER_DEFINITION": 3,
-    "14. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH": 3
+    " 2. CLEAN_HTML_IN_SOURCE_FIELD": false
   },
-  "2. shortcuts": {
-    "1. PRIMARY_SHORTCUT": "ctrl+alt+e"
+  "2. definition": {
+    " 1. DEFINITION": true,
+    " 2. DEFINITION_FIELD": 1,
+    " 3. REPLACE_BY": "____",
+    " 4. MAX_EXAMPLES_COUNT_PER_DEFINITION": 3,
+    " 5. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH": 3
+  },
+  "3. audio and phonetics": {
+    " 1. CORPUS": "American",
+    " 2. AUDIO": false,
+    " 3. AUDIO_FIELD": 2,
+    " 4. PHONETICS": false,
+    " 5. PHONETICS_FIELD": 3
+  },
+  "4. image": {
+    " 1. OPEN_IMAGES_IN_BROWSER": false,
+    " 2. SEARCH_APPEND": "",
+    " 3. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X",
+    " 4. or use this link instead": "https://www.istockphoto.com/search/2/image?phrase=$"
+  },
+  "5. shortcuts": {
+    " 1. PRIMARY_SHORTCUT": "ctrl+alt+e"
   }
 }

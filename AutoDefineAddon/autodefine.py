@@ -39,27 +39,40 @@ def get_config_value(section_name, param_name, default):
     return value
 
 
-SOURCE_FIELD = get_config_value('1. params', " 1. SOURCE_FIELD", 0)
-DEFINITION_FIELD = get_config_value('1. params', " 2. DEFINITION_FIELD", 1)
-AUDIO = get_config_value('1. params', " 3. AUDIO", False)
-AUDIO_FIELD = get_config_value('1. params', " 4. AUDIO_FIELD", 2)
-PHONETICS = get_config_value('1. params', " 5. PHONETICS", False)
-PHONETICS_FIELD = get_config_value('1. params', " 6. PHONETICS_FIELD", 3)
-OPEN_IMAGES_IN_BROWSER = get_config_value('1. params', " 7. OPEN_IMAGES_IN_BROWSER", False)
-SEARCH_APPEND = get_config_value('1. params', " 8. SEARCH_APPEND", "")
-REPLACE_BY = get_config_value('1. params', " 9. REPLACE_BY", "____")
-CLEAN_HTML_IN_SOURCE_FIELD = get_config_value('1. params', "10. CLEAN_HTML_IN_SOURCE_FIELD", False)
-OPEN_IMAGES_IN_BROWSER_LINK = get_config_value('1. params', "11. OPEN_IMAGES_IN_BROWSER_LINK", "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
-CORPUS = get_config_value('1. params', "12. CORPUS", "American")
-MAX_EXAMPLES_COUNT_PER_DEFINITION = get_config_value('1. params', "13. MAX_EXAMPLES_COUNT_PER_DEFINITION", 3)
-MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH = get_config_value('1. params', "14. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH", 3)
+section = '0. test mode'
+TEST_MODE = get_config_value(section, "TEST MODE", False)
 
-PRIMARY_SHORTCUT = get_config_value('2. shortcuts', " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
+section = '1. word'
+SOURCE_FIELD = get_config_value(section, " 1. SOURCE_FIELD", 0)
+CLEAN_HTML_IN_SOURCE_FIELD = get_config_value(section, " 2. CLEAN_HTML_IN_SOURCE_FIELD", False)
+
+section = '2. definition'
+DEFINITION = get_config_value(section, " 1. DEFINITION", True)
+DEFINITION_FIELD = get_config_value(section, " 2. DEFINITION_FIELD", 1)
+REPLACE_BY = get_config_value(section, " 3. REPLACE_BY", "____")
+MAX_EXAMPLES_COUNT_PER_DEFINITION = get_config_value(section, " 4. MAX_EXAMPLES_COUNT_PER_DEFINITION", 3)
+MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH = get_config_value(section, " 5. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH", 3)
+
+section = '3. audio and phonetics'
+CORPUS = get_config_value(section, " 1. CORPUS", "American")
+AUDIO = get_config_value(section, " 2. AUDIO", False)
+AUDIO_FIELD = get_config_value(section, " 3. AUDIO_FIELD", 2)
+PHONETICS = get_config_value(section, " 4. PHONETICS", False)
+PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
+
+section = '4. image'
+OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", False)
+SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", "")
+OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK", "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
+
+section = '5. shortcuts'
+PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
+
 
 if CORPUS.lower() == 'british':
-    CORPUS_TAG = 'BrE'
+    CORPUS_TAGS_PRIORITIZED = ['BrE', 'nAmE']
 elif CORPUS.lower() == 'american':
-    CORPUS_TAG = 'nAmE'
+    CORPUS_TAGS_PRIORITIZED = ['nAmE', 'BrE']
 else:
     raise Exception("Unknown CORPUS " + CORPUS)
 
@@ -107,6 +120,8 @@ HEADERS = {
 
 
 def focus_zero_field(editor):
+    if TEST_MODE:
+        return
     # no idea why, but sometimes web seems to be unavailable
     if editor.web:
         editor.web.eval("focusField(%d);" % 0)
@@ -204,10 +219,10 @@ def get_data(editor):
         tooltip(f"Word '{word}' not found.")
         return
 
-    insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
-
-    definition_html = get_definition_html(words_info)
-    insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
+    if DEFINITION:
+        insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
+        definition_html = get_definition_html(words_info)
+        insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
 
     if PHONETICS:
         phonetics = get_phonetics(words_info)
@@ -218,7 +233,7 @@ def get_data(editor):
         insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
 
     found_word = get_word_name(words_info)
-    if found_word != word:
+    if found_word != word and not TEST_MODE:
         if askUser(f"Attention! found another word '{found_word}', replace source field?"):
             insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
             word = found_word
@@ -308,15 +323,7 @@ def get_phonetics(word_infos):
         if wordform is None:
             wordform = "none"
         pronunciations = word_info.get("pronunciations")
-        for pronunciation in pronunciations:
-            if CORPUS_TAG == pronunciation["prefix"]:
-                phonetics = pronunciation["ipa"].replace('/', "")
-
-                value = phonetics_dict.get(phonetics, None)
-                if value is not None:
-                    value.append(wordform)
-                else:
-                    phonetics_dict[phonetics] = [wordform]
+        fill_phonetics_dict_prioritized(phonetics_dict, pronunciations, wordform)
 
     if len(phonetics_dict) == 0:
         return "No phonetics found"
@@ -326,6 +333,20 @@ def get_phonetics(word_infos):
         return "<br/>".join(["[" + key + '] - ' + ", ".join(phonetics_dict[key]) for key in iter(phonetics_dict)])
 
 
+def fill_phonetics_dict_prioritized(phonetics_dict, pronunciations, wordform):
+    for corpus_tag in CORPUS_TAGS_PRIORITIZED:
+        for pronunciation in pronunciations:
+            if corpus_tag == pronunciation["prefix"]:
+                phonetics = pronunciation["ipa"].replace('/', "")
+
+                value = phonetics_dict.get(phonetics, None)
+                if value is not None:
+                    value.append(wordform)
+                else:
+                    phonetics_dict[phonetics] = [wordform]
+                return
+
+
 def get_audio(word_infos):
     audio_dict = {}
     for word_info in word_infos:
@@ -333,8 +354,21 @@ def get_audio(word_infos):
         if wordform is None:
             wordform = "none"
         pronunciations = word_info.get("pronunciations")
+        fill_audio_dict_prioritized(audio_dict, pronunciations, wordform)
+
+    if len(audio_dict) == 0:
+        return "No audio found"
+    elif len(audio_dict) == 1:
+        return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
+    else:
+        return "<br/>".join(["[sound:" + audio_dict[key]['audio_name'] + '] - ' +
+                             ", ".join(audio_dict[key]['wordform']) for key in iter(audio_dict)])
+
+
+def fill_audio_dict_prioritized(audio_dict, pronunciations, wordform):
+    for corpus_tag in CORPUS_TAGS_PRIORITIZED:
         for pronunciation in pronunciations:
-            if CORPUS_TAG == pronunciation["prefix"]:
+            if corpus_tag == pronunciation["prefix"]:
                 audio_url = pronunciation["url"]
 
                 audio_name = audio_url.split('/')[-1]
@@ -354,14 +388,7 @@ def get_audio(word_infos):
                         with open(audio_path, 'wb') as f:
                             f.write(response.content)
                     audio_dict[audio_name] = {'wordform': [wordform], "audio_name": audio_name}
-
-    if len(audio_dict) == 0:
-        return "No audio found"
-    elif len(audio_dict) == 1:
-        return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
-    else:
-        return "<br/>".join(["[sound:" + audio_dict[key]['audio_name'] + '] - ' +
-                             ", ".join(audio_dict[key]['wordform']) for key in iter(audio_dict)])
+                return
 
 
 def insert_into_field(editor, text, field_id, overwrite=False):
