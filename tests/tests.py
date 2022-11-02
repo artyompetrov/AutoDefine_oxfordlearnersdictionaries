@@ -6,15 +6,6 @@ import requests
 import time
 import logging
 
-logger = logging.getLogger(__name__)
-
-logging.basicConfig(
-    filename='test.log',
-    filemode='w',
-    level=logging.ERROR,
-    format='%(asctime)s - %(levelname)s: %(message)s',
-)
-
 max_attempt = 10
 connection_timeout = 10
 
