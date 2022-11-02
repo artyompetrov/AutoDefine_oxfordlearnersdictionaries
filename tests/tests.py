@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 from pathlib import Path
 import requests
 import time
-import logging
 
 max_attempt = 10
 connection_timeout = 10
