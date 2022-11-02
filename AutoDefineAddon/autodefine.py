@@ -40,7 +40,7 @@ def get_config_value(section_name, param_name, default):
 
 
 section = '0. test mode'
-TEST_MODE = get_config_value(section, "TEST MODE", False)
+TEST_MODE = get_config_value(section, "TEST_MODE", False)
 
 section = '1. word'
 SOURCE_FIELD = get_config_value(section, " 1. SOURCE_FIELD", 0)
