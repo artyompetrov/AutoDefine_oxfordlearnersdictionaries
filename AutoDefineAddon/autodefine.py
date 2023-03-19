@@ -39,6 +39,8 @@ def get_config_value(section_name, param_name, default):
     return value
 
 
+AUDIO_FORMAT = "mp3"
+
 section = '0. test mode'
 TEST_MODE = get_config_value(section, "TEST_MODE", False)
 
@@ -59,7 +61,6 @@ AUDIO = get_config_value(section, " 2. AUDIO", False)
 AUDIO_FIELD = get_config_value(section, " 3. AUDIO_FIELD", 2)
 PHONETICS = get_config_value(section, " 4. PHONETICS", False)
 PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
-AUDIO_FORMAT = get_config_value(section, " 6. AUDIO_FORMAT", "mp3")
 
 section = '4. image'
 OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", False)
