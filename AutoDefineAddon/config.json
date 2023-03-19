@@ -22,7 +22,7 @@
     " 1. OPEN_IMAGES_IN_BROWSER": false,
     " 2. SEARCH_APPEND": "",
     " 3. OPEN_IMAGES_IN_BROWSER_LINK": "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X",
-    " 4. or use this link instead": "https://www.istockphoto.com/search/2/image?phrase=$"
+    " 3. or use this link instead": "https://www.istockphoto.com/search/2/image?phrase=$"
   },
   "5. shortcuts": {
     " 1. PRIMARY_SHORTCUT": "ctrl+alt+e"
