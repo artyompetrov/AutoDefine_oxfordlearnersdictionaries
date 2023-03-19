@@ -59,6 +59,7 @@ AUDIO = get_config_value(section, " 2. AUDIO", False)
 AUDIO_FIELD = get_config_value(section, " 3. AUDIO_FIELD", 2)
 PHONETICS = get_config_value(section, " 4. PHONETICS", False)
 PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
+AUDIO_FORMAT = get_config_value(section, " 6. AUDIO_FORMAT", "ogg")
 
 section = '4. image'
 OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", False)
@@ -369,7 +370,7 @@ def fill_audio_dict_prioritized(audio_dict, pronunciations, wordform):
     for corpus_tag in CORPUS_TAGS_PRIORITIZED:
         for pronunciation in pronunciations:
             if corpus_tag == pronunciation["prefix"]:
-                audio_url = pronunciation["url"]
+                audio_url = pronunciation["mp3"] if AUDIO_FORMAT.lower() == "mp3" else pronunciation["ogg"]
 
                 audio_name = audio_url.split('/')[-1]
 

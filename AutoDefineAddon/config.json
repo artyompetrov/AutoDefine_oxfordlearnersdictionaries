@@ -15,7 +15,8 @@
     " 2. AUDIO": false,
     " 3. AUDIO_FIELD": 2,
     " 4. PHONETICS": false,
-    " 5. PHONETICS_FIELD": 3
+    " 5. PHONETICS_FIELD": 3,
+    " 6. AUDIO_FORMAT": "ogg"
   },
   "4. image": {
     " 1. OPEN_IMAGES_IN_BROWSER": false,

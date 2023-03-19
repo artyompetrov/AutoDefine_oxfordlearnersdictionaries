@@ -62,8 +62,10 @@ class Word(object):
 
     br_pronounce_selector = '[geo=br] .phon'
     am_pronounce_selector = '[geo=n_am] .phon'
-    br_pronounce_audio_selector = '[geo=br] [data-src-ogg]'
-    am_pronounce_audio_selector = '[geo=n_am] [data-src-ogg]'
+    br_pronounce_audio_ogg_selector = '[geo=br] [data-src-ogg]'
+    am_pronounce_audio_ogg_selector = '[geo=n_am] [data-src-ogg]'
+    br_pronounce_audio_mp3_selector = '[geo=br] [data-src-mp3]'
+    am_pronounce_audio_mp3_selector = '[geo=n_am] [data-src-mp3]'
 
     definition_body_selector = '.senses_multiple'
     definition_body_selector_single = '.sense_single'
@@ -230,8 +232,8 @@ class Word(object):
         if cls.soup_data is None:
             return None
 
-        britain = {'prefix': None, 'ipa': None, 'url': None}
-        america = {'prefix': None, 'ipa': None, 'url': None}
+        britain = {'prefix': None, 'ipa': None, 'ogg': None, 'mp3': None}
+        america = {'prefix': None, 'ipa': None, 'ogg': None, 'mp3': None}
 
         try:
             britain_pron_tag = cls.soup_data.select(cls.br_pronounce_selector)[0]
@@ -245,16 +247,18 @@ class Word(object):
             pass
 
         try:
-            britain['url'] = cls.soup_data.select(cls.br_pronounce_audio_selector)[0].attrs['data-src-ogg']
-            america['url'] = cls.soup_data.select(cls.am_pronounce_audio_selector)[0].attrs['data-src-ogg']
+            britain['ogg'] = cls.soup_data.select(cls.br_pronounce_audio_ogg_selector)[0].attrs['data-src-ogg']
+            america['ogg'] = cls.soup_data.select(cls.am_pronounce_audio_ogg_selector)[0].attrs['data-src-ogg']
+            britain['mp3'] = cls.soup_data.select(cls.br_pronounce_audio_mp3_selector)[0].attrs['data-src-mp3']
+            america['mp3'] = cls.soup_data.select(cls.am_pronounce_audio_mp3_selector)[0].attrs['data-src-mp3']
         except IndexError:
             pass
 
-        if britain['prefix'] == None and britain['url'] is not None:
-            britain['prefix'] = cls.get_prefix_from_filename(britain['url'])
+        if britain['prefix'] is None and (britain['ogg'] or britain['mp3']):
+            britain['prefix'] = cls.get_prefix_from_filename(britain['ogg']) or cls.get_prefix_from_filename(britain['mp3'])
 
-        if america['prefix'] == None and america['url'] is not None:
-            america['prefix'] = cls.get_prefix_from_filename(america['url'])
+        if america['prefix'] is None and (america['ogg'] or america['mp3']):
+            america['prefix'] = cls.get_prefix_from_filename(america['ogg']) or cls.get_prefix_from_filename(america['mp3'])
 
         return [britain, america]
 

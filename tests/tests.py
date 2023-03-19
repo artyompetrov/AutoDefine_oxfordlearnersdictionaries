@@ -29,7 +29,8 @@ config = \
             " 2. AUDIO": True,
             " 3. AUDIO_FIELD": 2,
             " 4. PHONETICS": True,
-            " 5. PHONETICS_FIELD": 3
+            " 5. PHONETICS_FIELD": 3,
+            " 6. AUDIO_FORMAT": "mp3"
         },
         "4. image": {
             " 1. OPEN_IMAGES_IN_BROWSER": False,
