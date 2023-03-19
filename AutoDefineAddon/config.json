@@ -16,7 +16,7 @@
     " 3. AUDIO_FIELD": 2,
     " 4. PHONETICS": false,
     " 5. PHONETICS_FIELD": 3,
-    " 6. AUDIO_FORMAT": "ogg"
+    " 6. AUDIO_FORMAT": "mp3"
   },
   "4. image": {
     " 1. OPEN_IMAGES_IN_BROWSER": false,

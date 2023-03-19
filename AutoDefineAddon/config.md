@@ -11,7 +11,7 @@ Config structure have recently changed, if you updated the addon press Restore D
 * `CORPUS`: 'American' or 'British' English
 * `AUDIO`: Add audio of pronunciation to AUDIO_FIELD
 * `AUDIO_FIELD`: Index of field to insert audio into
-* `AUDIO_FORMAT`: Preferred audio format (ogg or mp3)
+* `AUDIO_FORMAT`: Preferred audio format (mp3 or ogg)
 * `PHONETICS`: Add International Phonetic Alphabet to PHONETICS_FIELD
 * `PHONETICS_FIELD`: Index of field to insert phonetics into
 * `OPEN_IMAGES_IN_BROWSER`: Open a browser tab with an image search for the same word?
