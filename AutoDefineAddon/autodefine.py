@@ -12,9 +12,9 @@
 import os
 import re
 from anki.hooks import addHook
-from aqt import mw
+from aqt import mw, gui_hooks
 from aqt.utils import tooltip
-from aqt.utils import askUser
+from aqt.utils import askUser, askUserDialog
 from bs4 import BeautifulSoup
 import requests
 import webbrowser
@@ -24,6 +24,12 @@ from contextlib import contextmanager
 import pathlib
 from .oxford import Word, WordNotFound
 from http import cookiejar
+from aqt.addcards import AddCards
+from aqt.editor import Editor
+from aqt.qt import *
+from typing import Optional
+
+add_dialog: Optional[AddCards] = None
 
 if getattr(mw.addonManager, "getConfig", None):
     CONFIG = mw.addonManager.getConfig(__name__)
@@ -38,6 +44,9 @@ def get_config_value(section_name, param_name, default):
                 value = section[param_name]
     return value
 
+ERROR_TAG_NAME = "AutoDefine_Error"
+#todo
+WORD_NOT_REPLACED_TAG_NAME = "AutoDefine_WordNotReplaced"
 
 AUDIO_FORMAT = "mp3"
 
@@ -51,25 +60,25 @@ CLEAN_HTML_IN_SOURCE_FIELD = get_config_value(section, " 2. CLEAN_HTML_IN_SOURCE
 section = '2. definition'
 DEFINITION = get_config_value(section, " 1. DEFINITION", True)
 DEFINITION_FIELD = get_config_value(section, " 2. DEFINITION_FIELD", 1)
-REPLACE_BY = get_config_value(section, " 3. REPLACE_BY", "____")
-MAX_EXAMPLES_COUNT_PER_DEFINITION = get_config_value(section, " 4. MAX_EXAMPLES_COUNT_PER_DEFINITION", 3)
+REPLACE_BY = get_config_value(section, " 3. REPLACE_BY", "#$#")
+MAX_EXAMPLES_COUNT_PER_DEFINITION = get_config_value(section, " 4. MAX_EXAMPLES_COUNT_PER_DEFINITION", 2)
 MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH = get_config_value(section, " 5. MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH", 3)
 
 section = '3. audio and phonetics'
 CORPUS = get_config_value(section, " 1. CORPUS", "American")
-AUDIO = get_config_value(section, " 2. AUDIO", False)
+AUDIO = get_config_value(section, " 2. AUDIO", True)
 AUDIO_FIELD = get_config_value(section, " 3. AUDIO_FIELD", 2)
-PHONETICS = get_config_value(section, " 4. PHONETICS", False)
+PHONETICS = get_config_value(section, " 4. PHONETICS", True)
 PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
 
 section = '4. image'
-OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", False)
-SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", "")
-OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK", "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
+OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", True)
+SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", " picture OR clipart OR illustration OR art")
+OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK",
+                                               "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
 
 section = '5. shortcuts'
 PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
-
 
 if CORPUS.lower() == 'british':
     CORPUS_TAGS_PRIORITIZED = ['BrE', 'nAmE']
@@ -129,24 +138,13 @@ def focus_zero_field(editor):
         editor.web.eval("focusField(%d);" % 0)
 
 
-def get_word(editor):
-    word = ""
-    maybe_web = editor.web
-    if maybe_web:
-        word = maybe_web.selectedText()
-
-    if word is None or word == "":
-        maybe_note = editor.note
-        if maybe_note:
-            word = maybe_note.fields[SOURCE_FIELD]
+def get_word(note):
+    word = note.fields[SOURCE_FIELD]
 
     word = clean_html(word).strip()
     word = re.sub(r"\s+", " ", word)
-
-    if CLEAN_HTML_IN_SOURCE_FIELD:
-        insert_into_field(editor, word, SOURCE_FIELD, overwrite=True)
-
     return word
+
 
 def nltk_token_spans(txt):
     tokens = tokinize(txt)
@@ -204,49 +202,60 @@ def replace_word_in_sentence(words, sentence, highlight):
             position += 1
 
     if not replaced_anything and highlight:
-        result = '<font color="blue">' + result + '</font>'
+        result = '<font color="red">Word_not_replaced</font> ' + result
 
     return result
 
 
-def get_data(editor):
-    word = get_word(editor)
-    if word == "":
-        tooltip("AutoDefine: No text found in note fields.")
-        return
+def get_data(note, is_bulk):
+    try:
+        word = get_word(note)
+        if word == "":
+            raise AutoDefineError("There is no word in SOURCE_FIELD")
 
-    words_info = get_words_info(word)
+        if CLEAN_HTML_IN_SOURCE_FIELD:
+            insert_into_field(note, word, SOURCE_FIELD, overwrite=True)
 
-    if len(words_info) == 0:
-        tooltip(f"Word '{word}' not found.")
-        return
+        words_info = get_words_info(word)
 
-    if DEFINITION:
-        insert_into_field(editor, '', DEFINITION_FIELD, overwrite=True)
-        definition_html = get_definition_html(words_info)
-        insert_into_field(editor, definition_html, DEFINITION_FIELD, overwrite=False)
+        if len(words_info) == 0:
+            raise AutoDefineError(f"Word not found in dictionary")
 
-    if PHONETICS:
-        phonetics = get_phonetics(words_info)
-        insert_into_field(editor, phonetics, PHONETICS_FIELD, overwrite=True)
+        found_word = get_word_name(words_info)
+        if found_word != word:
+            if TEST_MODE or is_bulk:
+                raise AutoDefineError(f"Found definition for word '{found_word}' instead'")
+            else:
+                if askUser(f"Attention! found another word '{found_word}', replace source field?"):
+                    insert_into_field(note, found_word, SOURCE_FIELD, overwrite=True)
+                    word = found_word
 
-    if AUDIO:
-        audio = get_audio(words_info)
-        insert_into_field(editor, audio, AUDIO_FIELD, overwrite=True)
+        if DEFINITION:
+            insert_into_field(note, '', DEFINITION_FIELD, overwrite=True)
+            definition_html = get_definition_html(words_info)
+            insert_into_field(note, definition_html, DEFINITION_FIELD, overwrite=False)
 
-    found_word = get_word_name(words_info)
-    if found_word != word and not TEST_MODE:
-        if askUser(f"Attention! found another word '{found_word}', replace source field?"):
-            insert_into_field(editor, found_word, SOURCE_FIELD, overwrite=True)
-            word = found_word
+        if PHONETICS:
+            phonetics = get_phonetics(words_info)
+            insert_into_field(note, phonetics, PHONETICS_FIELD, overwrite=True)
 
-    if OPEN_IMAGES_IN_BROWSER:
-        link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + SEARCH_APPEND)
-        webbrowser.open(
-            link,
-            0, False)
+        if AUDIO:
+            audio = get_audio(words_info)
+            insert_into_field(note, audio, AUDIO_FIELD, overwrite=True)
 
-    focus_zero_field(editor)
+        if OPEN_IMAGES_IN_BROWSER and not is_bulk:
+            link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + SEARCH_APPEND)
+            webbrowser.open(
+                link,
+                0, False)
+
+        if ERROR_TAG_NAME in note.tags:
+            note.tags.remove(ERROR_TAG_NAME)
+
+    except AutoDefineError as error:
+        if ERROR_TAG_NAME not in note.tags:
+            note.tags.append(ERROR_TAG_NAME)
+        raise error
 
 
 def get_words_info(request_word):
@@ -278,17 +287,20 @@ def get_word_name(word_infos):
 def get_definition_html(word_infos):
     strings = []
     for word_info in word_infos:
-        word = word_info["name"]
-        wordform = word_info.get("wordform")
-        if wordform is not None:
-            strings.append('<i>' + wordform + '</i>')
-
         definitions_by_namespaces = word_info["definitions"]
 
         definitions = []
         for definition_by_namespace in definitions_by_namespaces:
             for definition in definition_by_namespace["definitions"]:
                 definitions.append(definition)
+
+        if len(definitions) == 0:
+            continue
+
+        word = word_info["name"]
+        wordform = word_info.get("wordform")
+        if wordform is not None:
+            strings.append('<i>' + wordform + '</i>')
 
         if MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH is not False:
             definitions = definitions[0:MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH]
@@ -328,7 +340,7 @@ def get_phonetics(word_infos):
         fill_phonetics_dict_prioritized(phonetics_dict, pronunciations, wordform)
 
     if len(phonetics_dict) == 0:
-        return "No phonetics found"
+        return "<span class=\"do_not_show\">No phonetics found</span>"
     elif len(phonetics_dict) == 1:
         return '[' + next(iter(phonetics_dict)) + ']'
     else:
@@ -359,7 +371,7 @@ def get_audio(word_infos):
         fill_audio_dict_prioritized(audio_dict, pronunciations, wordform)
 
     if len(audio_dict) == 0:
-        return "No audio found"
+        return "<span class=\"do_not_show\">No audio found</span>"
     elif len(audio_dict) == 1:
         return f'[sound:{audio_dict[next(iter(audio_dict))]["audio_name"]}]'
     else:
@@ -393,30 +405,266 @@ def fill_audio_dict_prioritized(audio_dict, pronunciations, wordform):
                 return
 
 
-def insert_into_field(editor, text, field_id, overwrite=False):
-    if len(editor.note.fields) <= field_id:
-        tooltip("AutoDefine: Tried to insert '%s' into user-configured field number %d (0-indexed), but note type only "
-                "has %d fields. Use a different note type with %d or more fields, or change the index in the "
-                "Add-on configuration." % (text, field_id, len(editor.note.fields), field_id + 1), period=10000)
-        return
+def insert_into_field(note, text, field_id, overwrite=False):
+    if len(note.fields) <= field_id:
+        raise AutoDefineError(
+            "AutoDefine: Tried to insert '%s' into user-configured field number %d (0-indexed), but note type only "
+            "has %d fields. Use a different note type with %d or more fields, or change the index in the "
+            "Add-on configuration." % (text, field_id, len(note.fields), field_id + 1))
+
     if overwrite:
-        editor.note.fields[field_id] = text
+        note.fields[field_id] = text
     else:
-        editor.note.fields[field_id] += text
-    editor.loadNote()
+        note.fields[field_id] += text
 
 
 def clean_html(raw_html):
     return re.sub(re.compile('<.*?>'), '', raw_html).replace("&nbsp;", " ")
 
 
-def get_data_with_exception_handling(editor):
+def new_add_cards(addcards: AddCards):
+    global add_dialog
+    add_dialog = addcards
+
+
+def switch_model(name):
     try:
-        get_data(editor)
+        notetype = mw.col.models.by_name(name)
+        if notetype:
+            id = notetype["id"]
+            add_dialog.notetype_chooser.selected_notetype_id = id
+            tooltip(name)
+        else:
+            tooltip("No note type with name: " + name)
+    except:  # triggered when not in Add Cards window
+        pass
+
+
+def addCustomModel(col):
+    name = "AutoDefineOxfordLearnersDictionary"
+    mm = col.models
+
+    model = mm.byName(name)
+
+    if not model:
+        model = mm.new(name)
+        mm.add(model)
+
+    # add fields
+    addField(mm, model, {"Word", "DefinitionAndExamples", "Audio", "Phonetics", "Image"})
+
+    model['css'] = """
+.card {
+  font-family: arial;
+  font-size: 20px;
+  color: black;
+  background-color: white;
+  text-align: left;
+}
+
+.front {
+  text-align: center;
+}
+
+.do_not_show {
+  display: none;
+}
+
+.img {
+  text-align: center;
+}
+
+img {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+b {
+  color: black;
+}
+
+i {
+  color: grey;
+}
+
+.nightMode b {
+  color: #8ab4f8;
+}
+
+.nightMode i {
+  color: silver;
+}
+
+.nightMode a {
+  color: #8ab4f8;
+}
+"""
+
+    # front
+    t = getTemplate(mm, model, 'Normal')
+    t['qfmt'] = """<div class="front">{{Word}} {{Audio}}</div>"""
+    t['afmt'] = """
+<div class="front">{{Word}} {{Audio}}</div>
+<hr id=answer>
+<div class="img">{{Image}}</div>
+<hr>
+<div id="to_replace">
+{{DefinitionAndExamples}}
+</div>
+<script>
+    document.getElementById('to_replace').innerHTML =
+     document.getElementById('to_replace').innerHTML.replace(/[#]([^#]+)[#]/ig, "<b>$1</b>");
+</script>
+"""
+
+    # back
+    t = getTemplate(mm, model, "Reverse")
+    t['qfmt'] = """
+<script>
+    var hintString = '{{Word}}';
+    var position = 0;
+    function hint() {
+    position += 1;
+    if (hintString.length <= position) 
+    {
+        document.getElementById('hint_link').style.display='none'}
+        return hintString.substring(0, position);
+    }
+</script>
+
+<div class="front">
+    {{type:Word}}
+    <br id="hint_br">
+    <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
+    <div id="hint_div" class=hint style="display: none"></div>
+</div>
+<hr id=answer>
+<div class="img">{{Image}}</div>
+<hr>
+<div id="to_replace">
+{{DefinitionAndExamples}}
+</div>
+
+<script>
+    document.getElementById('to_replace').innerHTML =
+     document.getElementById('to_replace').innerHTML
+     .replace(/[#]([^#]+)[#]/ig, "<span class='word'><b>$1</b></span><span class='replacement'>____</span>");
+     
+    for (let el of document.querySelectorAll('.word')) el.style.display = 'none';
+    for (let el of document.querySelectorAll('.replacement')) el.style.display = 'inline';
+</script>
+"""
+    t['afmt'] = """
+<div class="front">{{Audio}}</div>
+    {{FrontSide}}
+<script>
+    document.getElementById('hint_link').style.display='none';
+    document.getElementById('hint_br').style.display='none';
+    for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
+    for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
+</script>
+    """
+
+    return model
+
+
+def getTemplate(mm, model, templateName):
+    for ankiTemplate in model['tmpls']:
+        if ankiTemplate['name'] == templateName:
+            return ankiTemplate
+    t = mm.newTemplate(templateName)
+    mm.addTemplate(model, t)
+    return t
+
+
+def addField(mm, model, fieldsToCreate: list):
+    existingFieldsMap = mm.field_map(model)
+
+    existingFields = list(existingFieldsMap.keys())
+
+    toCreate = fieldsToCreate - existingFields
+    toDelete = existingFields - fieldsToCreate
+
+    for field in toCreate:
+        mm.addField(model, mm.newField(field))
+
+    for field in toDelete:
+        mm.remove_field(model, existingFieldsMap[field][1])
+    # todo порядок полей починить
+
+
+def bulkDefine(browser):
+    ids = browser.selectedNotes()
+    if not ids:
+        tooltip("No cards selected.")
+        return
+    mw.checkpoint("AutoDefine")
+    mw.progress.start(immediate=True, max=len(ids))
+    browser.model.beginReset()
+
+    errors = []
+
+    def process(nids, mw):
+        count = 0
+        max = len(nids)
+        for nid in nids:
+            count += 1
+            note = mw.col.getNote(nid)
+            word = None
+            try:
+                word = get_word(note)
+                mw.taskman.run_on_main(
+                    lambda c=count, w=word, m=max: mw.progress.update(value=c, label=w, process=False, max=m)
+                )
+                get_data(note, is_bulk=True)
+
+            except AutoDefineError as error:
+                if word is not None and word != "":
+                    errors.append(f"{word}: {error.message}")
+                else:
+                    errors.append(f"Word number {count}: {error.message}")
+
+            note.flush()
+
+    def onFinish(future):
+        browser.model.endReset()
+        mw.requireReset()
+        mw.progress.finish()
+        mw.reset()
+        if len(errors) > 0:
+            askUserDialog("\n".join(errors), ['OK'], title='Bulk operation finished with some errors', parent=browser) \
+                .run()
+
+    mw.taskman.run_in_background(process, onFinish, args={"nids": ids, "mw": mw})
+
+
+def get_data_with_exception_handling(editor: Editor):
+    try:
+        # addCustomModel(mw.col)
+        # switch_model("AutoDefineOxfordLearnersDictionary")
+
+        note = editor.note
+        try:
+            get_data(note, is_bulk=False)
+        except AutoDefineError as error:
+            tooltip(error.message, period=10000)
+
+        flush_note(note)
+        mw.requireReset()
+        mw.reset()
+        editor.loadNote()
+        focus_zero_field(editor)
     except Exception as ex:
         raise Exception("\n\nATTENTION! Please copy this error massage and open an issue on \n"
                         "https://github.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries/issues \n"
                         "so I could investigate the reason of error and fix it") from ex
+
+
+def flush_note(note):
+    try:
+        note.flush()
+    except Exception:
+        pass
 
 
 def setup_buttons(buttons, editor):
@@ -434,4 +682,21 @@ def setup_buttons(buttons, editor):
     return buttons
 
 
+def setupMenu(browser):
+    menu = browser.form.menuEdit
+    menu.addSeparator()
+    a = menu.addAction('Auto define in bulk...')
+    a.setShortcut(QKeySequence("ctrl+alt+e"))
+    a.triggered.connect(lambda _, b=browser: bulkDefine(b))
+
+
+addHook("browser.setupMenus", setupMenu)
+
 addHook("setupEditorButtons", setup_buttons)
+gui_hooks.add_cards_did_init.append(new_add_cards)
+
+
+class AutoDefineError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
