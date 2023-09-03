@@ -252,7 +252,7 @@ def get_data(note, is_bulk):
         if ERROR_TAG_NAME in note.tags:
             note.tags.remove(ERROR_TAG_NAME)
 
-    except AutoDefineError as error:
+    except Exception as error:
         if ERROR_TAG_NAME not in note.tags:
             note.tags.append(ERROR_TAG_NAME)
         raise error
@@ -619,11 +619,9 @@ def bulkDefine(browser):
                 get_data(note, is_bulk=True)
 
             except AutoDefineError as error:
-                if word is not None and word != "":
-                    errors.append(f"{word}: {error.message}")
-                else:
-                    errors.append(f"Word number {count}: {error.message}")
-
+                save_error(count, error.message, word, errors)
+            except Exception as ex:
+                save_error(count, "Exception", word, errors)
             note.flush()
 
     def onFinish(future):
@@ -637,6 +635,11 @@ def bulkDefine(browser):
 
     mw.taskman.run_in_background(process, onFinish, args={"nids": ids, "mw": mw})
 
+def save_error(count, error_text, word, errors):
+    if word is not None and word != "":
+        errors.append(f"{word}: {error_text}")
+    else:
+        errors.append(f"Word number {count}: {error_text}")
 
 def get_data_with_exception_handling(editor: Editor):
     try:
