@@ -386,7 +386,7 @@ def fill_audio_dict_prioritized(audio_dict, pronunciations, wordform):
                     if not os.path.exists(audio_path):
                         req = requests.Session()
                         req.cookies.set_policy(BlockAll())
-                        response = req.get(audio_url, timeout=5, headers={'User-agent': 'mother animal'})
+                        response = req.get(audio_url, timeout=5, headers={'User-agent': 'Mozilla/5.0'})
                         with open(audio_path, 'wb') as f:
                             f.write(response.content)
                     audio_dict[audio_name] = {'wordform': [wordform], "audio_name": audio_name}
