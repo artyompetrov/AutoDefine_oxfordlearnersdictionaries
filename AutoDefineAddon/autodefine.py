@@ -675,6 +675,8 @@ i {
     {
         document.getElementById('hint_link').style.display='none'
         document.getElementById('verb_forms').style.display='inline'; 
+        for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
+        for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
     }
     return hintString.substring(0, position);
     }
@@ -713,7 +715,6 @@ i {
     {{FrontSide}}
 <script>
     document.getElementById('hint_link').style.display='none';
-    document.getElementById('hint_br').style.display='none';
     document.getElementById('verb_forms').style.display='inline';
     for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
