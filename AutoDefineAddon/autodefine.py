@@ -289,12 +289,21 @@ def get_verb_forms(words_info):
     for word_info in words_info:
         verb_forms = word_info.get("verb_forms")
         if verb_forms is not None:
+            thirdps = verb_forms.get("thirdps")
+            if thirdps is not None:
+                forms.append(thirdps.get('value'))
+
             past = verb_forms.get("past")
             if past is not None:
                 forms.append(past.get('value'))
+
             pastpart = verb_forms.get("pastpart")
             if pastpart is not None:
                 forms.append(pastpart.get('value'))
+
+            prespart = verb_forms.get("prespart")
+            if prespart is not None:
+                forms.append(prespart.get('value'))
     return forms
 
 
@@ -634,9 +643,9 @@ i {
 
     # front
     t = getTemplate(mm, model, 'Normal')
-    t['qfmt'] = """<div class="front">{{Word}} {{VerbForms}} {{Audio}}</div>"""
+    t['qfmt'] = """<div class="front">{{Word}} {{Audio}} <br/> {{VerbForms}}</div>"""
     t['afmt'] = """
-<div class="front">{{Word}} {{VerbForms}} {{Audio}}</div>
+<div class="front">{{Word}} {{Audio}} <br> {{VerbForms}}</div>
 <hr id="answer">
 <div class="img" id="img_div">{{Image}}</div>
 <hr id="image_hr">
@@ -675,7 +684,7 @@ i {
     {{type:Word}}
     <br id="hint_br">
     <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
-    <div id="hint_div" class=hint style="display: none"></div><span id="verb_forms" style="display: none"> {{VerbForms}}</span>
+    <div id="hint_div" class=hint style="display: none"></div><br><span id="verb_forms" style="display: none"> {{VerbForms}}</span>
 </div>
 
 <hr id="answer">
@@ -709,8 +718,7 @@ i {
     for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
 </script>
-    
-    """
+"""
 
     if new_model:
         mm.add(model)
