@@ -1,4 +1,7 @@
 {
+  "0. general": {
+    " 1. USE_DEFAULT_TEMPLATE": true
+  },
   "1. word": {
     " 1. SOURCE_FIELD": 0,
     " 2. CLEAN_HTML_IN_SOURCE_FIELD": false

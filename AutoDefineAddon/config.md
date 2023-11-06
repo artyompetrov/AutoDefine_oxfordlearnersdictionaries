@@ -1,6 +1,8 @@
 ATTENTION!
 Config structure have recently changed, if you updated the addon press Restore Defaults button.
+I recommend to use default settings!
 
+* `USE_DEFAULT_TEMPLATE`: Use default template AutoDefineOxfordLearnersDictionary (preferred)
 * `SOURCE_FIELD`: Index of field with defining word
 * `CLEAN_HTML_IN_SOURCE_FIELD`: Remove html tags from source field
 * `DEFINITION`: Add definition to DEFINITION_FIELD
@@ -18,8 +20,3 @@ Config structure have recently changed, if you updated the addon press Restore D
 * `OPEN_IMAGES_IN_BROWSER_LINK`: Images search link, $ sign will be replaced by the defining word
 * `IMAGE_FIELD`: Image field order number
 * `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.
-
-
-
-
-

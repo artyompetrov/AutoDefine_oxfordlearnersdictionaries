@@ -44,7 +44,7 @@ def get_config_value(section_name, param_name, default):
                 value = section[param_name]
     return value
 
-CUSTOM_MODEL_NAME = "AutoDefineOxfordLearnersDictionary"
+DEFAULT_TEMPLATE_NAME = "AutoDefineOxfordLearnersDictionary"
 
 ERROR_TAG_NAME = "AutoDefine_Error"
 #todo
@@ -54,6 +54,9 @@ AUDIO_FORMAT = "mp3"
 
 section = '0. test mode'
 TEST_MODE = get_config_value(section, "TEST_MODE", False)
+
+section = '0. general'
+USE_DEFAULT_TEMPLATE = get_config_value(section, " 1. USE_DEFAULT_TEMPLATE", True)
 
 section = '1. word'
 SOURCE_FIELD = get_config_value(section, " 1. SOURCE_FIELD", 0)
@@ -436,7 +439,6 @@ def switch_model(name):
         if notetype:
             id = notetype["id"]
             add_dialog.notetype_chooser.selected_notetype_id = id
-            tooltip(name)
         else:
             tooltip("No note type with name: " + name)
     except:
@@ -447,10 +449,10 @@ def addCustomModel(col, name):
     mm = col.models
     model = mm.byName(name)
 
-    need_to_add_model = False
+    new_model = False
     if not model:
         model = mm.new(name)
-        need_to_add_model = True
+        new_model = True
 
     # add fields
     model['flds'] = [
@@ -461,7 +463,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': '',
+            'description': 'Write word to define here',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
@@ -473,7 +475,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': '',
+            'description': 'Leave empty, will be filled automatically',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
@@ -485,7 +487,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': '',
+            'description': 'Leave empty, will be filled automatically',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
@@ -497,7 +499,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': '',
+            'description': 'Leave empty, will be filled automatically',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
@@ -509,7 +511,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': '',
+            'description': 'Insert image here',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
@@ -628,8 +630,10 @@ i {
 </script>
     """
 
-    if need_to_add_model:
+    if new_model:
         mm.add(model)
+    else:
+        mm.update(model)
 
 
 def getTemplate(mm, model, templateName):
@@ -690,9 +694,9 @@ def save_error(count, error_text, word, errors):
 
 def get_data_with_exception_handling(editor: Editor):
     try:
-        addCustomModel(mw.col, CUSTOM_MODEL_NAME)
-        switch_model(CUSTOM_MODEL_NAME)
-        editor.loadNote()
+        addCustomModel(mw.col, DEFAULT_TEMPLATE_NAME)
+        switch_model(DEFAULT_TEMPLATE_NAME)
+        #editor.loadNote()
 
         note = editor.note
         try:
