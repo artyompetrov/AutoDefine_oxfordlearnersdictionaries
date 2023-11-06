@@ -316,19 +316,20 @@ def get_words_info(request_word):
         word_info = Word.info()
         words_info.append(word_info)
         word_name = word_info['name'].lower()
-        other_results = word_info['other_results']
-        for other_result in other_results:
-            all_matches = other_result.get('All matches')
-            if all_matches is not None:
-                for match in all_matches:
-                    if word_name == match['name'].strip().lower():
-                        try:
-                            Word.get(match['id'], HEADERS, is_search=False)
-                            word_info = Word.info()
-                            if word_info['name'].lower() == word_name:
-                                words_info.append(Word.info())
-                        except WordNotFound:
-                            pass
+        other_results = word_info.get('other_results')
+        if other_results is not None:
+            for other_result in other_results:
+                all_matches = other_result.get('All matches')
+                if all_matches is not None:
+                    for match in all_matches:
+                        if word_name == match['name'].strip().lower():
+                            try:
+                                Word.get(match['id'], HEADERS, is_search=False)
+                                word_info = Word.info()
+                                if word_info['name'].lower() == word_name:
+                                    words_info.append(Word.info())
+                            except WordNotFound:
+                                pass
 
     except WordNotFound:
         pass
