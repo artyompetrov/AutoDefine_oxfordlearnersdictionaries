@@ -44,6 +44,8 @@ def get_config_value(section_name, param_name, default):
                 value = section[param_name]
     return value
 
+CUSTOM_MODEL_NAME = "AutoDefineOxfordLearnersDictionary"
+
 ERROR_TAG_NAME = "AutoDefine_Error"
 #todo
 WORD_NOT_REPLACED_TAG_NAME = "AutoDefine_WordNotReplaced"
@@ -436,22 +438,82 @@ def switch_model(name):
             tooltip(name)
         else:
             tooltip("No note type with name: " + name)
-    except:  # triggered when not in Add Cards window
+    except:
+        # triggered when not in Add Cards window
         pass
 
-
-def addCustomModel(col):
-    name = "AutoDefineOxfordLearnersDictionary"
+def addCustomModel(col, name):
     mm = col.models
-
     model = mm.byName(name)
 
+    need_to_add_model = False
     if not model:
         model = mm.new(name)
-        mm.add(model)
+        need_to_add_model = True
 
     # add fields
-    addField(mm, model, {"Word", "DefinitionAndExamples", "Audio", "Phonetics", "Image"})
+    model['flds'] = [
+        {
+            'name': 'Word',
+            'ord': 0,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': '',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        },
+        {
+            'name': 'DefinitionAndExamples',
+            'ord': 1,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': '',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        },
+        {
+            'name': 'Audio',
+            'ord': 2,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': '',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        },
+        {
+            'name': 'Phonetics',
+            'ord': 3,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': '',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        },
+        {
+            'name': 'Image',
+            'ord': 4,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': '',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        }
+    ]
 
     model['css'] = """
 .card {
@@ -565,7 +627,8 @@ i {
 </script>
     """
 
-    return model
+    if need_to_add_model:
+        mm.add(model)
 
 
 def getTemplate(mm, model, templateName):
@@ -575,23 +638,6 @@ def getTemplate(mm, model, templateName):
     t = mm.newTemplate(templateName)
     mm.addTemplate(model, t)
     return t
-
-
-def addField(mm, model, fieldsToCreate: list):
-    existingFieldsMap = mm.field_map(model)
-
-    existingFields = list(existingFieldsMap.keys())
-
-    toCreate = fieldsToCreate - existingFields
-    toDelete = existingFields - fieldsToCreate
-
-    for field in toCreate:
-        mm.addField(model, mm.newField(field))
-
-    for field in toDelete:
-        mm.remove_field(model, existingFieldsMap[field][1])
-    # todo порядок полей починить
-
 
 def bulkDefine(browser):
     ids = browser.selectedNotes()
@@ -643,8 +689,8 @@ def save_error(count, error_text, word, errors):
 
 def get_data_with_exception_handling(editor: Editor):
     try:
-        # addCustomModel(mw.col)
-        # switch_model("AutoDefineOxfordLearnersDictionary")
+        addCustomModel(mw.col, CUSTOM_MODEL_NAME)
+        switch_model(CUSTOM_MODEL_NAME)
 
         note = editor.note
         try:
