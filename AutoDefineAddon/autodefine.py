@@ -656,8 +656,10 @@ i {
     position += 1;
     if (hintString.length <= position) 
     {
-        document.getElementById('hint_link').style.display='none'}
-        return hintString.substring(0, position);
+        document.getElementById('hint_link').style.display='none'
+        document.getElementById('verb_forms').style.display='inline'; 
+    }
+    return hintString.substring(0, position);
     }
 </script>
 
@@ -665,7 +667,7 @@ i {
     {{type:Word}}
     <br id="hint_br">
     <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
-    <div id="hint_div" class=hint style="display: none"></div><span id="verb_forms" style="display: none">{{VerbForms}}</span>
+    <div id="hint_div" class=hint style="display: none"></div><span id="verb_forms" style="display: none"> {{VerbForms}}</span>
 </div>
 
 <hr id="answer">
@@ -688,7 +690,6 @@ i {
         document.getElementById('image_hr').style.display = 'none';
     }
 </script>
-
 """
     t['afmt'] = """
 <div class="front">{{Audio}}</div>
@@ -700,6 +701,7 @@ i {
     for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
 </script>
+    
     """
 
     if new_model:
