@@ -76,14 +76,18 @@ AUDIO_FIELD = get_config_value(section, " 3. AUDIO_FIELD", 2)
 PHONETICS = get_config_value(section, " 4. PHONETICS", True)
 PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
 
-section = '4. image'
+section = '4. verb forms'
+VERB_FORMS = get_config_value(section, " 1. VERB_FORMS", True)
+VERB_FORMS_FIELD = get_config_value(section, " 2. VERB_FORMS_FIELD", 4)
+
+section = '5. image'
 OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", True)
 SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", " AND (picture OR clipart OR illustration OR art)")
 OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK",
                                                "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
-IMAGE_FIELD = get_config_value(section, " 4. IMAGE_FIELD", 4)
+IMAGE_FIELD = get_config_value(section, " 4. IMAGE_FIELD", 5)
 
-section = '5. shortcuts'
+section = '6. shortcuts'
 PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
 
 if CORPUS.lower() == 'british':
@@ -163,54 +167,58 @@ def nltk_token_spans(txt):
         offset = next_offset
 
 
-def replace_word_in_sentence(words, sentence, highlight):
-    words_to_replace = [unify(str.lower(word)) for word in tokinize(words)]
+def replace_word_in_sentence(words_list, sentence, highlight):
+    replaced_anything = False
 
     result = str()
-    spans = list(nltk_token_spans(sentence))
+    for words in words_list:
+        result = str()
+        words_to_replace = [unify(str.lower(word)) for word in tokinize(words)]
+        spans = list(nltk_token_spans(sentence))
 
-    replaced_anything = False
-    position = 0
-    offset = 0
-    while position < len(spans):
-        all_match = True
-        cur_position = position
-        for word_to_replace in words_to_replace:
-            token, start, stop = spans[cur_position]
-            if all_match:
-                if unify(str.lower(token)) != word_to_replace:
-                    all_match = False
-                    break
-                else:
-                    cur_position += 1
-                    if cur_position >= len(spans):
+        position = 0
+        offset = 0
+        while position < len(spans):
+            all_match = True
+            cur_position = position
+            for word_to_replace in words_to_replace:
+                token, start, stop = spans[cur_position]
+                if all_match:
+                    if unify(str.lower(token)) != word_to_replace:
+                        all_match = False
                         break
-        if all_match:
-            for i in range(len(words_to_replace)):
-                token, start, stop = spans[position + i]
-                replacement = REPLACE_BY.replace("$", token)
+                    else:
+                        cur_position += 1
+                        if cur_position >= len(spans):
+                            break
+            if all_match:
+                for i in range(len(words_to_replace)):
+                    token, start, stop = spans[position + i]
+                    replacement = REPLACE_BY.replace("$", token)
+                    spaces_to_add = start - len(result) - offset
+                    offset += len(token) - len(replacement)
+                    if spaces_to_add < 0:
+                        raise Exception("Incorrect spaces_to_add value")
+                    result += ' ' * spaces_to_add
+                    result += replacement
+
+                position += len(words_to_replace)
+                replaced_anything = True
+            else:
+                token, start, stop = spans[position]
                 spaces_to_add = start - len(result) - offset
-                offset += len(token) - len(replacement)
                 if spaces_to_add < 0:
                     raise Exception("Incorrect spaces_to_add value")
                 result += ' ' * spaces_to_add
-                result += replacement
-
-            position += len(words_to_replace)
-            replaced_anything = True
-        else:
-            token, start, stop = spans[position]
-            spaces_to_add = start - len(result) - offset
-            if spaces_to_add < 0:
-                raise Exception("Incorrect spaces_to_add value")
-            result += ' ' * spaces_to_add
-            result += token
-            position += 1
+                result += token
+                position += 1
+        sentence = result
 
     if not replaced_anything and highlight:
         result = '<font color="red">Word_not_replaced</font> ' + result
 
     return replaced_anything, result
+
 
 
 def get_data(note, is_bulk):
@@ -236,9 +244,11 @@ def get_data(note, is_bulk):
                     insert_into_field(note, found_word, SOURCE_FIELD, overwrite=True)
                     word = found_word
 
+        verb_forms = get_verb_forms(words_info)
+
         if DEFINITION:
             insert_into_field(note, '', DEFINITION_FIELD, overwrite=True)
-            (definition_html, need_word_not_replaced_tag) = get_definition_html(words_info)
+            (definition_html, need_word_not_replaced_tag) = get_definition_html(words_info, verb_forms)
             insert_into_field(note, definition_html, DEFINITION_FIELD, overwrite=False)
 
             if need_word_not_replaced_tag:
@@ -256,6 +266,9 @@ def get_data(note, is_bulk):
             audio = get_audio(words_info)
             insert_into_field(note, audio, AUDIO_FIELD, overwrite=True)
 
+        if VERB_FORMS_FIELD:
+            insert_into_field(note, str.join(' ', verb_forms), VERB_FORMS_FIELD, overwrite=True)
+
         if OPEN_IMAGES_IN_BROWSER and not is_bulk:
             link = OPEN_IMAGES_IN_BROWSER_LINK.replace("$", word + SEARCH_APPEND)
             webbrowser.open(
@@ -270,6 +283,19 @@ def get_data(note, is_bulk):
             note.tags.append(ERROR_TAG_NAME)
         raise error
 
+
+def get_verb_forms(words_info):
+    forms = []
+    for word_info in words_info:
+        verb_forms = word_info.get("verb_forms")
+        if verb_forms is not None:
+            past = verb_forms.get("past")
+            if past is not None:
+                forms.append(past.get('value'))
+            pastpart = verb_forms.get("pastpart")
+            if pastpart is not None:
+                forms.append(pastpart.get('value'))
+    return forms
 
 def get_words_info(request_word):
     words_info = []
@@ -297,7 +323,7 @@ def get_word_name(word_infos):
         return word_info["name"]
 
 
-def get_definition_html(word_infos):
+def get_definition_html(word_infos, verb_forms):
     strings = []
 
     need_word_not_replaced_tag = False
@@ -320,11 +346,14 @@ def get_definition_html(word_infos):
         if MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH is not False:
             definitions = definitions[0:MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH]
 
+        words_to_replace = [word]
+        for verb_form in verb_forms:
+            words_to_replace.append(verb_form)
         previous_definition_without_examples = False
         for definition in definitions:
             maybe_description = definition.get("description")
             if maybe_description is not None:
-                (_, description) = replace_word_in_sentence(word, maybe_description, False)
+                (_, description) = replace_word_in_sentence(words_to_replace, maybe_description, False)
                 if previous_definition_without_examples:
                     strings.append('<br/>')
                 strings.append('<div><b>' + description + '</b></div>')
@@ -338,7 +367,7 @@ def get_definition_html(word_infos):
                 strings.append('<ul>')
                 for example in examples:
                     example = example.replace('/', ' / ')
-                    (replaced_anything, example_clean) = replace_word_in_sentence(word, example, True)
+                    (replaced_anything, example_clean) = replace_word_in_sentence(words_to_replace, example, True)
 
                     need_word_not_replaced_tag |= not replaced_anything
                     strings.append('<li>' + example_clean + '</li>')
@@ -523,6 +552,18 @@ def addCustomModel(col, name):
             'excludeFromSearch': False
         },
         {
+            'name': 'VerbForms',
+            'ord': VERB_FORMS_FIELD,
+            'sticky': False,
+            'rtl': False,
+            'font': 'Arial',
+            'size': 20,
+            'description': 'Leave empty, will be filled automatically',
+            'plainText': False,
+            'collapsed': False,
+            'excludeFromSearch': False
+        },
+        {
             'name': 'Image',
             'ord': IMAGE_FIELD,
             'sticky': False,
@@ -585,9 +626,9 @@ i {
 
     # front
     t = getTemplate(mm, model, 'Normal')
-    t['qfmt'] = """<div class="front">{{Word}} {{Audio}}</div>"""
+    t['qfmt'] = """<div class="front">{{Word}} {{VerbForms}} {{Audio}}</div>"""
     t['afmt'] = """
-<div class="front">{{Word}} {{Audio}}</div>
+<div class="front">{{Word}} {{VerbForms}} {{Audio}}</div>
 <hr id="answer">
 <div class="img" id="img_div">{{Image}}</div>
 <hr id="image_hr">
@@ -624,8 +665,9 @@ i {
     {{type:Word}}
     <br id="hint_br">
     <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
-    <div id="hint_div" class=hint style="display: none"></div>
+    <div id="hint_div" class=hint style="display: none"></div><span id="verb_forms" style="display: none">{{VerbForms}}</span>
 </div>
+
 <hr id="answer">
 <div class="img" id="img_div">{{Image}}</div>
 <hr id="image_hr">
@@ -646,6 +688,7 @@ i {
         document.getElementById('image_hr').style.display = 'none';
     }
 </script>
+
 """
     t['afmt'] = """
 <div class="front">{{Audio}}</div>
@@ -653,6 +696,7 @@ i {
 <script>
     document.getElementById('hint_link').style.display='none';
     document.getElementById('hint_br').style.display='none';
+    document.getElementById('verb_forms').style.display='inline';
     for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
 </script>

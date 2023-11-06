@@ -60,6 +60,8 @@ class Word(object):
     wordform_selector = header_selector + ' .pos'
     property_global_selector = header_selector + ' .grammar'
 
+    verb_forms_selector = 'tr.verb_form[form]'
+    verb_forms_selector_td = 'td.verb_form'
     br_pronounce_selector = '[geo=br] .phon'
     am_pronounce_selector = '[geo=n_am] .phon'
     br_pronounce_audio_ogg_selector = '[geo=br] [data-src-ogg]'
@@ -115,6 +117,28 @@ class Word(object):
             cls.delete('[title="Express Yourself"]')
             cls.delete('[title="Collocations"]')
             cls.delete('[title="Word Origin"]')
+
+    @classmethod
+    def verb_forms(cls):
+        """ return verb forms for irregular verbs """
+        if cls.soup_data is None:
+            return None
+        try:
+            result = {}
+            for verb_form in cls.soup_data.select(cls.verb_forms_selector):
+                form = verb_form.attrs['form']
+
+                value = verb_form.select(cls.verb_forms_selector_td)[0]
+
+                span_tag = value.select('span.vf_prefix')[0]
+                prefix = span_tag.text
+                span_tag.replace_with('')
+
+                result[form] = {'prefix': prefix, 'value': value.text.strip()}
+
+            return result
+        except IndexError:
+            return None
 
     @classmethod
     def other_results(cls):
@@ -525,5 +549,6 @@ class Word(object):
 
         if word['wordform'] == 'verb':
             word['phrasal_verbs'] = cls.phrasal_verbs()
+            word['verb_forms'] = cls.verb_forms()
 
         return word

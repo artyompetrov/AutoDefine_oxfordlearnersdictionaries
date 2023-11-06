@@ -19,4 +19,6 @@ I recommend to use default settings!
 * `SEARCH_APPEND`: Append phrase when searching for images
 * `OPEN_IMAGES_IN_BROWSER_LINK`: Images search link, $ sign will be replaced by the defining word
 * `IMAGE_FIELD`: Image field order number
+* `VERB_FORMS`: Add irregular verb forms
+* `VERB_FORMS_FIELD`: Irregular verb forms field
 * `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.
