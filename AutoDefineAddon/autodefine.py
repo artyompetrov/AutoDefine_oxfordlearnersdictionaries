@@ -297,21 +297,27 @@ def get_verb_forms(words_info):
                 forms.append(pastpart.get('value'))
     return forms
 
+
 def get_words_info(request_word):
     words_info = []
     word_to_search = request_word.replace(" ", "-").lower()
     try:
-        Word.get(word_to_search, HEADERS)
+        Word.get(word_to_search, HEADERS, is_search=True)
 
         word_info = Word.info()
-        name = word_info["name"].strip()
         words_info.append(word_info)
-
-        for i in range(2, 5):
-            Word.get(word_to_search + "_" + str(i), HEADERS)
-            word_info_2 = Word.info()
-            if word_info_2["name"].strip() == name:
-                words_info.append(word_info_2)
+        word_name = word_info['name']
+        other_results = word_info['other_results']
+        for other_result in other_results:
+            all_matches = other_result.get('All matches')
+            if all_matches is not None:
+                for match in all_matches:
+                    if word_name.lower() == match['name'].strip().lower():
+                        try:
+                            Word.get(match['id'], HEADERS, is_search=False)
+                            words_info.append(Word.info())
+                        except WordNotFound:
+                            pass
 
     except WordNotFound:
         pass

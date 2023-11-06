@@ -84,9 +84,12 @@ class Word(object):
     soup_data = None
 
     @classmethod
-    def get_url(cls, word):
+    def get_url(cls, word, is_search):
         """ get url of word definition """
-        baseurl = 'https://www.oxfordlearnersdictionaries.com/definition/english/'
+        if is_search:
+            baseurl = 'https://www.oxfordlearnersdictionaries.com/search/english/?q='
+        else:
+            baseurl = 'https://www.oxfordlearnersdictionaries.com/definition/english/'
         return baseurl + word
 
     @classmethod
@@ -99,12 +102,12 @@ class Word(object):
             pass
 
     @classmethod
-    def get(cls, word, headers):
+    def get(cls, word, headers, is_search):
         """ get html soup of word """
         req = requests.Session()
         req.cookies.set_policy(BlockAll())
 
-        page_html = req.get(cls.get_url(word), headers=headers)
+        page_html = req.get(cls.get_url(word, is_search), headers=headers)
         if page_html.status_code == 404:
             raise WordNotFound
         else:
@@ -206,7 +209,11 @@ class Word(object):
         """ get word name """
         if cls.soup_data is None:
             return None
-        return cls.soup_data.select(cls.title_selector)[0].text
+
+        name = cls.soup_data.select(cls.title_selector)[0]
+        for span_tag in name.select('span'):
+            span_tag.replace_with('')
+        return name.text.strip()
 
     @classmethod
     def id(cls):
@@ -552,3 +559,8 @@ class Word(object):
             word['verb_forms'] = cls.verb_forms()
 
         return word
+
+
+[{
+    'All matches': [{'name': 'content', 'id': 'content2_1', 'wordform': 'adjective'}, {'name': 'content', 'id': 'content2_2', 'wordform': 'verb'}, {'name': 'content', 'id': 'contentment', 'wordform': ''}, {'name': 'content farm', 'id': 'content-farm', 'wordform': 'noun'}, {'name': 'content mill', 'id': 'content-mill', 'wordform': 'noun'}, {'name': 'content word', 'id': 'content-word', 'wordform': 'noun'}, {'name': 'content marketing', 'id': 'content-marketing', 'wordform': 'noun'}, {'name': 'content provider', 'id': 'content-provider', 'wordform': 'noun'}, {'name': 'content management system', 'id': 'content-management-system', 'wordform': 'noun'}, {'name': 'content farms', 'id': 'content-farm', 'wordform': ''}, {'name': 'content mill', 'id': 'content-farm', 'wordform': ''}, {'name': 'content mills', 'id': 'content-mill', 'wordform': ''}, {'name': 'content farm', 'id': 'content-mill', 'wordform': ''}, {'name': 'content providers', 'id': 'content-provider', 'wordform': ''}, {'name': 'user-generated content', 'id': 'ugc', 'wordform': ''}, {'name': 'content management system', 'id': 'cms', 'wordform': ''}, {'name': 'to your heart’s content', 'id': 'content2_3#heart_idmg_50', 'wordform': ''}]}, {'Idioms': [{'name': 'to your heart’s content', 'id': 'content2_3#heart_idmg_50', 'wordform': ''}]}
+ ]
