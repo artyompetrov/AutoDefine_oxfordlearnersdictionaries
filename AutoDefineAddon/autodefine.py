@@ -531,7 +531,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': 'Write word to define here',
+            'description': 'Write a word to define here',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
