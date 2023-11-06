@@ -591,7 +591,7 @@ def addCustomModel(col, name):
             'rtl': False,
             'font': 'Arial',
             'size': 20,
-            'description': 'Insert image here',
+            'description': 'Insert an image here',
             'plainText': False,
             'collapsed': False,
             'excludeFromSearch': False
