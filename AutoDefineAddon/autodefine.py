@@ -337,11 +337,10 @@ def get_definition_html(word_infos):
             if len(examples) > 0:
                 strings.append('<ul>')
                 for example in examples:
+                    example = example.replace('/', ' / ')
                     (replaced_anything, example_clean) = replace_word_in_sentence(word, example, True)
 
-                    need_word_not_replaced_tag |= replaced_anything
-
-                    example_clean = example_clean.replace('/', ' / ')
+                    need_word_not_replaced_tag |= not replaced_anything
                     strings.append('<li>' + example_clean + '</li>')
                 strings.append('</ul>')
                 previous_definition_without_examples = False
