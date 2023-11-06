@@ -4,7 +4,7 @@
   },
   "1. word": {
     " 1. SOURCE_FIELD": 0,
-    " 2. CLEAN_HTML_IN_SOURCE_FIELD": false
+    " 2. CLEAN_HTML_IN_SOURCE_FIELD": true
   },
   "2. definition": {
     " 1. DEFINITION": true,

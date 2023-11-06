@@ -47,7 +47,7 @@ def get_config_value(section_name, param_name, default):
 DEFAULT_TEMPLATE_NAME = "AutoDefineOxfordLearnersDictionary"
 
 ERROR_TAG_NAME = "AutoDefine_Error"
-#todo
+
 WORD_NOT_REPLACED_TAG_NAME = "AutoDefine_WordNotReplaced"
 
 AUDIO_FORMAT = "mp3"
@@ -60,7 +60,7 @@ USE_DEFAULT_TEMPLATE = get_config_value(section, " 1. USE_DEFAULT_TEMPLATE", Tru
 
 section = '1. word'
 SOURCE_FIELD = get_config_value(section, " 1. SOURCE_FIELD", 0)
-CLEAN_HTML_IN_SOURCE_FIELD = get_config_value(section, " 2. CLEAN_HTML_IN_SOURCE_FIELD", False)
+CLEAN_HTML_IN_SOURCE_FIELD = get_config_value(section, " 2. CLEAN_HTML_IN_SOURCE_FIELD", True)
 
 section = '2. definition'
 DEFINITION = get_config_value(section, " 1. DEFINITION", True)
@@ -315,16 +315,18 @@ def get_words_info(request_word):
 
         word_info = Word.info()
         words_info.append(word_info)
-        word_name = word_info['name']
+        word_name = word_info['name'].lower()
         other_results = word_info['other_results']
         for other_result in other_results:
             all_matches = other_result.get('All matches')
             if all_matches is not None:
                 for match in all_matches:
-                    if word_name.lower() == match['name'].strip().lower():
+                    if word_name == match['name'].strip().lower():
                         try:
                             Word.get(match['id'], HEADERS, is_search=False)
-                            words_info.append(Word.info())
+                            word_info = Word.info()
+                            if word_info['name'].lower() == word_name:
+                                words_info.append(Word.info())
                         except WordNotFound:
                             pass
 
@@ -395,7 +397,8 @@ def get_definition_html(word_infos, verb_forms):
 
         strings.append('<hr/>')
 
-    del strings[-1]
+    if len(strings) > 0:
+        del strings[-1]
 
     return BeautifulSoup(''.join(strings), 'html.parser').prettify(), need_word_not_replaced_tag
 
