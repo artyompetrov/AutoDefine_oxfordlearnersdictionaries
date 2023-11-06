@@ -78,7 +78,7 @@ PHONETICS_FIELD = get_config_value(section, " 5. PHONETICS_FIELD", 3)
 
 section = '4. image'
 OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER", True)
-SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", " picture OR clipart OR illustration OR art")
+SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", " AND (picture OR clipart OR illustration OR art)")
 OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK",
                                                "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
 IMAGE_FIELD = get_config_value(section, " 4. IMAGE_FIELD", 4)
@@ -210,7 +210,7 @@ def replace_word_in_sentence(words, sentence, highlight):
     if not replaced_anything and highlight:
         result = '<font color="red">Word_not_replaced</font> ' + result
 
-    return result
+    return replaced_anything, result
 
 
 def get_data(note, is_bulk):
@@ -238,8 +238,15 @@ def get_data(note, is_bulk):
 
         if DEFINITION:
             insert_into_field(note, '', DEFINITION_FIELD, overwrite=True)
-            definition_html = get_definition_html(words_info)
+            (definition_html, need_word_not_replaced_tag) = get_definition_html(words_info)
             insert_into_field(note, definition_html, DEFINITION_FIELD, overwrite=False)
+
+            if need_word_not_replaced_tag:
+                if WORD_NOT_REPLACED_TAG_NAME not in note.tags:
+                    note.tags.append(WORD_NOT_REPLACED_TAG_NAME)
+            else:
+                if WORD_NOT_REPLACED_TAG_NAME in note.tags:
+                    note.tags.remove(WORD_NOT_REPLACED_TAG_NAME)
 
         if PHONETICS:
             phonetics = get_phonetics(words_info)
@@ -292,6 +299,8 @@ def get_word_name(word_infos):
 
 def get_definition_html(word_infos):
     strings = []
+
+    need_word_not_replaced_tag = False
     for word_info in word_infos:
         definitions_by_namespaces = word_info["definitions"]
 
@@ -311,10 +320,13 @@ def get_definition_html(word_infos):
         if MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH is not False:
             definitions = definitions[0:MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH]
 
+        previous_definition_without_examples = False
         for definition in definitions:
             maybe_description = definition.get("description")
             if maybe_description is not None:
-                description = replace_word_in_sentence(word, maybe_description, False)
+                (_, description) = replace_word_in_sentence(word, maybe_description, False)
+                if previous_definition_without_examples:
+                    strings.append('<br/>')
                 strings.append('<div><b>' + description + '</b></div>')
 
             examples = definition.get("examples", []) + definition.get("extra_example", [])
@@ -325,15 +337,22 @@ def get_definition_html(word_infos):
             if len(examples) > 0:
                 strings.append('<ul>')
                 for example in examples:
-                    example_clean = replace_word_in_sentence(word, example, True)
+                    (replaced_anything, example_clean) = replace_word_in_sentence(word, example, True)
+
+                    need_word_not_replaced_tag |= replaced_anything
+
+                    example_clean = example_clean.replace('/', ' / ')
                     strings.append('<li>' + example_clean + '</li>')
                 strings.append('</ul>')
+                previous_definition_without_examples = False
+            else:
+                previous_definition_without_examples = True
 
         strings.append('<hr/>')
 
     del strings[-1]
 
-    return BeautifulSoup(''.join(strings), 'html.parser').prettify()
+    return BeautifulSoup(''.join(strings), 'html.parser').prettify(), need_word_not_replaced_tag
 
 
 def get_phonetics(word_infos):
@@ -570,15 +589,20 @@ i {
     t['qfmt'] = """<div class="front">{{Word}} {{Audio}}</div>"""
     t['afmt'] = """
 <div class="front">{{Word}} {{Audio}}</div>
-<hr id=answer>
-<div class="img">{{Image}}</div>
-<hr>
+<hr id="answer">
+<div class="img" id="img_div">{{Image}}</div>
+<hr id="image_hr">
 <div id="to_replace">
 {{DefinitionAndExamples}}
 </div>
 <script>
     document.getElementById('to_replace').innerHTML =
-     document.getElementById('to_replace').innerHTML.replace(/[#]([^#]+)[#]/ig, "<b>$1</b>");
+    document.getElementById('to_replace').innerHTML.replace(/[#]([^#]+)[#]/ig, "<b>$1</b>");
+    
+    if (document.getElementById('img_div').innerHTML.toString().length == 0)
+    {
+        document.getElementById('image_hr').style.display = 'none';
+    }
 </script>
 """
 
@@ -603,9 +627,9 @@ i {
     <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
     <div id="hint_div" class=hint style="display: none"></div>
 </div>
-<hr id=answer>
-<div class="img">{{Image}}</div>
-<hr>
+<hr id="answer">
+<div class="img" id="img_div">{{Image}}</div>
+<hr id="image_hr">
 <div id="to_replace">
 {{DefinitionAndExamples}}
 </div>
@@ -617,6 +641,11 @@ i {
      
     for (let el of document.querySelectorAll('.word')) el.style.display = 'none';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'inline';
+    
+    if (document.getElementById('img_div').innerHTML.toString().length == 0)
+    {
+        document.getElementById('image_hr').style.display = 'none';
+    }
 </script>
 """
     t['afmt'] = """
@@ -694,9 +723,9 @@ def save_error(count, error_text, word, errors):
 
 def get_data_with_exception_handling(editor: Editor):
     try:
-        addCustomModel(mw.col, DEFAULT_TEMPLATE_NAME)
-        switch_model(DEFAULT_TEMPLATE_NAME)
-        #editor.loadNote()
+        if USE_DEFAULT_TEMPLATE:
+            addCustomModel(mw.col, DEFAULT_TEMPLATE_NAME)
+            switch_model(DEFAULT_TEMPLATE_NAME)
 
         note = editor.note
         try:
