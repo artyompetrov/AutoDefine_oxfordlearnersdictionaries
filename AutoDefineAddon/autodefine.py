@@ -78,6 +78,7 @@ OPEN_IMAGES_IN_BROWSER = get_config_value(section, " 1. OPEN_IMAGES_IN_BROWSER",
 SEARCH_APPEND = get_config_value(section, " 2. SEARCH_APPEND", " picture OR clipart OR illustration OR art")
 OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROWSER_LINK",
                                                "https://www.google.com/search?q=$&tbm=isch&safe=off&tbs&hl=en&sa=X")
+IMAGE_FIELD = get_config_value(section, " 4. IMAGE_FIELD", 4)
 
 section = '5. shortcuts'
 PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
@@ -455,7 +456,7 @@ def addCustomModel(col, name):
     model['flds'] = [
         {
             'name': 'Word',
-            'ord': 0,
+            'ord': SOURCE_FIELD,
             'sticky': False,
             'rtl': False,
             'font': 'Arial',
@@ -467,7 +468,7 @@ def addCustomModel(col, name):
         },
         {
             'name': 'DefinitionAndExamples',
-            'ord': 1,
+            'ord': DEFINITION_FIELD,
             'sticky': False,
             'rtl': False,
             'font': 'Arial',
@@ -479,7 +480,7 @@ def addCustomModel(col, name):
         },
         {
             'name': 'Audio',
-            'ord': 2,
+            'ord': AUDIO_FIELD,
             'sticky': False,
             'rtl': False,
             'font': 'Arial',
@@ -491,7 +492,7 @@ def addCustomModel(col, name):
         },
         {
             'name': 'Phonetics',
-            'ord': 3,
+            'ord': PHONETICS_FIELD,
             'sticky': False,
             'rtl': False,
             'font': 'Arial',
@@ -503,7 +504,7 @@ def addCustomModel(col, name):
         },
         {
             'name': 'Image',
-            'ord': 4,
+            'ord': IMAGE_FIELD,
             'sticky': False,
             'rtl': False,
             'font': 'Arial',
@@ -691,6 +692,7 @@ def get_data_with_exception_handling(editor: Editor):
     try:
         addCustomModel(mw.col, CUSTOM_MODEL_NAME)
         switch_model(CUSTOM_MODEL_NAME)
+        editor.loadNote()
 
         note = editor.note
         try:

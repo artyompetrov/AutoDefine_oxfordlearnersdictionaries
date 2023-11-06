@@ -16,6 +16,7 @@ Config structure have recently changed, if you updated the addon press Restore D
 * `OPEN_IMAGES_IN_BROWSER`: Open a browser tab with an image search for the same word?
 * `SEARCH_APPEND`: Append phrase when searching for images
 * `OPEN_IMAGES_IN_BROWSER_LINK`: Images search link, $ sign will be replaced by the defining word
+* `IMAGE_FIELD`: Image field order number
 * `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.
 
 
