@@ -167,13 +167,13 @@ def nltk_token_spans(txt):
         offset = next_offset
 
 
-def replace_word_in_sentence(words_list, sentence, highlight):
+def replace_word_in_sentence(words_to_replace_lists, sentence, highlight):
     replaced_anything = False
 
     result = str()
-    for words in words_list:
+    for words_to_replace in words_to_replace_lists:
         result = str()
-        words_to_replace = [unify(str.lower(word)) for word in tokinize(words)]
+
         spans = list(nltk_token_spans(sentence))
 
         position = 0
@@ -355,11 +355,13 @@ def get_definition_html(word_infos, verb_forms):
         words_to_replace = [word]
         for verb_form in verb_forms:
             words_to_replace.append(verb_form)
+        words_to_replace_lists = set([tuple([unify(str.lower(word)) for word in tokinize(words)]) for words in words_to_replace])
+
         previous_definition_without_examples = False
         for definition in definitions:
             maybe_description = definition.get("description")
             if maybe_description is not None:
-                (_, description) = replace_word_in_sentence(words_to_replace, maybe_description, False)
+                (_, description) = replace_word_in_sentence(words_to_replace_lists, maybe_description, False)
                 if previous_definition_without_examples:
                     strings.append('<br/>')
                 strings.append('<div><b>' + description + '</b></div>')
@@ -373,7 +375,7 @@ def get_definition_html(word_infos, verb_forms):
                 strings.append('<ul>')
                 for example in examples:
                     example = example.replace('/', ' / ')
-                    (replaced_anything, example_clean) = replace_word_in_sentence(words_to_replace, example, True)
+                    (replaced_anything, example_clean) = replace_word_in_sentence(words_to_replace_lists, example, True)
 
                     need_word_not_replaced_tag |= not replaced_anything
                     strings.append('<li>' + example_clean + '</li>')
