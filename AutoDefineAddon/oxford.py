@@ -102,16 +102,26 @@ class Word(object):
             pass
 
     @classmethod
+    def __parse_word(cls, page_html):
+        """ save parsed html soup of word in cls.soup_data or raise WordNotFound if word is not found """
+        if page_html.status_code == 404:
+            raise WordNotFound
+
+        cls.soup_data = soup(page_html.content, 'html.parser')
+
+        """ check if "No exact ..." message exists """
+        no_exact = cls.soup_data.select_one('#search-results > h1')
+        if no_exact is not None and no_exact.string.startswith('No exact match found'):
+            raise WordNotFound
+
+    @classmethod
     def get(cls, word, headers, is_search):
         """ get html soup of word """
         req = requests.Session()
         req.cookies.set_policy(BlockAll())
 
         page_html = req.get(cls.get_url(word, is_search), headers=headers)
-        if page_html.status_code == 404:
-            raise WordNotFound
-        else:
-            cls.soup_data = soup(page_html.content, 'html.parser')
+        cls.__parse_word(page_html)
 
         if cls.soup_data is not None:
             # remove some unnecessary tags to prevent false positive results
