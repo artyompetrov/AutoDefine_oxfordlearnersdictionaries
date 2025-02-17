@@ -10,7 +10,7 @@ I recommend to use default settings!
 * `REPLACE_BY`: Replace learning words in examples (use $ sign to insert replacing word itself)
 * `MAX_EXAMPLES_COUNT_PER_DEFINITION`: Maximum example count per definition ('false' for unlimited, or a number)
 * `MAX_DEFINITIONS_COUNT_PER_PART_OF_SPEECH`: Maximum definition count per part of speech ('false' for unlimited, or a number)
-* `CORPUS`: 'American' or 'British' English
+* `CORPUS`: 'American' or 'British' English, 'American_first' or 'Britsh_first' will retrieve both corpora in different orders.
 * `AUDIO`: Add audio of pronunciation to AUDIO_FIELD
 * `AUDIO_FIELD`: Index of field to insert audio into
 * `PHONETICS`: Add International Phonetic Alphabet to PHONETICS_FIELD
