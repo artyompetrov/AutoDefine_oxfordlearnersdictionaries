@@ -91,8 +91,12 @@ section = '6. shortcuts'
 PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
 
 if CORPUS.lower() == 'british':
-    CORPUS_TAGS_PRIORITIZED = ['BrE', 'nAmE']
+    CORPUS_TAGS_PRIORITIZED = ['BrE']
 elif CORPUS.lower() == 'american':
+    CORPUS_TAGS_PRIORITIZED = ['nAmE']
+elif CORPUS.lower() == 'british_first':
+    CORPUS_TAGS_PRIORITIZED = ['BrE', 'nAmE']
+elif CORPUS.lower() == 'american_first':
     CORPUS_TAGS_PRIORITIZED = ['nAmE', 'BrE']
 else:
     raise Exception("Unknown CORPUS " + CORPUS)
@@ -432,7 +436,6 @@ def fill_phonetics_dict_prioritized(phonetics_dict, pronunciations, wordform):
                     value.append(wordform)
                 else:
                     phonetics_dict[phonetics] = [wordform]
-                return
 
 
 def get_audio(word_infos):
