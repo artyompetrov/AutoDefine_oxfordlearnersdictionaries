@@ -3,7 +3,7 @@ Config structure have recently changed, if you updated the addon press Restore D
 I recommend to use default settings!
 Fields are indexed starting from 0. Enable options below only if the corresponding fields exist in your note type.
 
-* `USE_DEFAULT_TEMPLATE`: Use default template AutoDefineOxfordLearnersDictionary (preferred). It creates two card sides; remove the reverse card by editing the template in Anki.
+* `USE_DEFAULT_TEMPLATE`: Use default template AutoDefineOxfordLearnersDictionary (preferred). It creates two card sides.
 * `SOURCE_FIELD`: Index of field with defining word
 * `CLEAN_HTML_IN_SOURCE_FIELD`: Remove html tags from source field
 * `DEFINITION`: Add definition to DEFINITION_FIELD
