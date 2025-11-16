@@ -22,6 +22,6 @@ Fields are indexed starting from 0. Enable options below only if the correspondi
 * `IMAGE_FIELD`: Image field order number
 * `VERB_FORMS`: Add irregular verb forms
 * `VERB_FORMS_FIELD`: Irregular verb forms field
-* `PRIMARY_SHORTCUT`: Keyboard shortcut to run default AutoDefine.
+* `PRIMARY_SHORTCUT`: Keyboard shortcut to run AutoDefine (default `ctrl+alt+shift+d`); leave empty to disable or pick any custom sequence.
 
 This configuration is designed for a single note type. If you use multiple note types, adjust the field indexes accordingly.

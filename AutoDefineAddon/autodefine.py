@@ -88,7 +88,11 @@ OPEN_IMAGES_IN_BROWSER_LINK = get_config_value(section, " 3. OPEN_IMAGES_IN_BROW
 IMAGE_FIELD = get_config_value(section, " 4. IMAGE_FIELD", 5)
 
 section = '6. shortcuts'
-PRIMARY_SHORTCUT = get_config_value(section, " 1. PRIMARY_SHORTCUT", "ctrl+alt+e")
+DEFAULT_SHORTCUT = "ctrl+alt+shift+d"
+primary_shortcut_value = get_config_value(section, " 1. PRIMARY_SHORTCUT", DEFAULT_SHORTCUT)
+if not isinstance(primary_shortcut_value, str):
+    primary_shortcut_value = ""
+PRIMARY_SHORTCUT = primary_shortcut_value.strip() or DEFAULT_SHORTCUT
 
 if CORPUS.lower() == 'british':
     CORPUS_TAGS_PRIORITIZED = ['BrE']
@@ -821,15 +825,21 @@ def flush_note(note):
 
 
 def setup_buttons(buttons, editor):
-    both_button = editor.addButton(icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
-                                   cmd="AD",
-                                   func=lambda ed: ed.saveNow(lambda: get_data_with_exception_handling(ed)),
-                                   tip="AutoDefine Word (%s)" %
-                                       ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
-                                   toggleable=False,
-                                   label="",
-                                   keys=PRIMARY_SHORTCUT,
-                                   disables=False)
+    button_kwargs = dict(
+        icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
+        cmd="AD",
+        func=lambda ed: ed.saveNow(lambda: get_data_with_exception_handling(ed)),
+        tip="AutoDefine Word (%s)" %
+            ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
+        toggleable=False,
+        label="",
+        disables=False,
+    )
+
+    if PRIMARY_SHORTCUT:
+        button_kwargs["keys"] = PRIMARY_SHORTCUT
+
+    both_button = editor.addButton(**button_kwargs)
 
     buttons.append(both_button)
     return buttons
@@ -839,7 +849,8 @@ def setupMenu(browser):
     menu = browser.form.menuEdit
     menu.addSeparator()
     a = menu.addAction('Auto define in bulk...')
-    a.setShortcut(QKeySequence("ctrl+alt+e"))
+    if PRIMARY_SHORTCUT:
+        a.setShortcut(QKeySequence(PRIMARY_SHORTCUT))
     a.triggered.connect(lambda _, b=browser: bulkDefine(b))
 
 

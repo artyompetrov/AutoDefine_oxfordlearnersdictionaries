@@ -32,7 +32,6 @@
     " 4. IMAGE_FIELD": 5
   },
   "6. shortcuts": {
-    " 1. PRIMARY_SHORTCUT": "ctrl+alt+e",
-    "todo": "doesntwork"
+    " 1. PRIMARY_SHORTCUT": "ctrl+alt+shift+d"
   }
 }
