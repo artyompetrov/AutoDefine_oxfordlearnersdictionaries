@@ -657,9 +657,9 @@ i {
 
     # front
     t = getTemplate(mm, model, 'Normal')
-    t['qfmt'] = """<div class="front">{{Word}} {{Audio}} <br/> {{VerbForms}}</div>"""
+    t['qfmt'] = """<div class="front">{{Word}} {{Audio}} <br/> {{Phonetics}} <br/> {{VerbForms}}</div>"""
     t['afmt'] = """
-<div class="front">{{Word}} {{Audio}} <br> {{VerbForms}}</div>
+<div class="front">{{Word}} {{Audio}} <br/> {{Phonetics}} <br/> {{VerbForms}}</div>
 <hr id="answer">
 <div class="img" id="img_div">{{Image}}</div>
 <hr id="image_hr">
@@ -700,7 +700,11 @@ i {
     {{type:Word}}
     <br id="hint_br">
     <a id="hint_link" class=hint href="#"onclick="document.getElementById('hint_div').style.display='inline-block';document.getElementById('hint_div').innerHTML=hint();return false;">Show hint</a>
-    <div id="hint_div" class=hint style="display: none"></div><br><span id="verb_forms" style="display: none"> {{VerbForms}}</span>
+    <div id="hint_div" class=hint style="display: none"></div>
+    <br>
+    <span id="phonetics" style="display: none"> {{Phonetics}}</span>
+    <br>
+    <span id="verb_forms" style="display: none"> {{VerbForms}}</span>
 </div>
 
 <hr id="answer">
@@ -729,6 +733,7 @@ i {
     {{FrontSide}}
 <script>
     document.getElementById('hint_link').style.display='none';
+    document.getElementById('phonetics').style.display='inline';
     document.getElementById('verb_forms').style.display='inline';
     for (let el of document.querySelectorAll('.word')) el.style.display = 'inline';
     for (let el of document.querySelectorAll('.replacement')) el.style.display = 'none';
