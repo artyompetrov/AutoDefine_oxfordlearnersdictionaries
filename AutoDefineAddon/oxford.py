@@ -56,6 +56,12 @@ class Word(object):
     entry_selector = '#entryContent > .entry'
     header_selector = '.top-container'
 
+    # remove proxy - disabled by default but may be added to config in future.
+    PROXIES = {
+        #'http': 'http://127.0.0.1:8118',
+        #'https': 'http://127.0.0.1:8118',
+    }
+
     title_selector = header_selector + ' .headword'
     wordform_selector = header_selector + ' .pos'
     property_global_selector = header_selector + ' .grammar'
@@ -120,7 +126,11 @@ class Word(object):
         req = requests.Session()
         req.cookies.set_policy(BlockAll())
 
-        page_html = req.get(cls.get_url(word, is_search), headers=headers)
+        page_html = req.get(
+            cls.get_url(word, is_search),
+            headers=headers,
+            proxies=cls.PROXIES,
+        )
         cls.__parse_word(page_html)
 
         if cls.soup_data is not None:
@@ -130,6 +140,14 @@ class Word(object):
             cls.delete('[title="Express Yourself"]')
             cls.delete('[title="Collocations"]')
             cls.delete('[title="Word Origin"]')
+
+    @classmethod
+    def fetch_audio(cls, audio_url, headers, timeout=5):
+        """ download audio content for pronunciations """
+        req = requests.Session()
+        req.cookies.set_policy(BlockAll())
+        response = req.get(audio_url, timeout=timeout, headers=headers, proxies=cls.PROXIES)
+        return response.content
 
     @classmethod
     def verb_forms(cls):

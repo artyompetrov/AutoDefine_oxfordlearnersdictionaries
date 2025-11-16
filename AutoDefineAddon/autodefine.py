@@ -473,11 +473,9 @@ def fill_audio_dict_prioritized(audio_dict, pronunciations, wordform):
                     value['wordform'].append(wordform)
                 else:
                     if not os.path.exists(audio_path):
-                        req = requests.Session()
-                        req.cookies.set_policy(BlockAll())
-                        response = req.get(audio_url, timeout=5, headers=HEADERS)
+                        response = Word.fetch_audio(audio_url, HEADERS, timeout=5)
                         with open(audio_path, 'wb') as f:
-                            f.write(response.content)
+                            f.write(response)
                     audio_dict[audio_name] = {'wordform': [wordform], "audio_name": audio_name}
                 return
 
