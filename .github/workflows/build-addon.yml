@@ -1,0 +1,22 @@
+name: Build add-on package
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build AutoDefine add-on archive
+        run: ./scripts/build_addon.sh
+
+      - name: Upload add-on artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoDefineAddon
+          path: dist/AutoDefineAddon.zip
+          retention-days: 1
