@@ -270,7 +270,7 @@ def get_data(note, is_bulk):
             audio = get_audio(words_info)
             insert_into_field(note, audio, AUDIO_FIELD, overwrite=True)
 
-        if VERB_FORMS_FIELD:
+        if VERB_FORMS:
             insert_into_field(note, str.join(' ', verb_forms), VERB_FORMS_FIELD, overwrite=True)
 
         if OPEN_IMAGES_IN_BROWSER and not is_bulk:
@@ -777,7 +777,9 @@ def bulkDefine(browser):
         mw.progress.finish()
         mw.reset()
         if len(errors) > 0:
-            askUserDialog("\n".join(errors), ['OK'], title='Bulk operation finished with some errors', parent=browser) \
+            # QLabel inside AskUserDialog expects HTML; use <br/> to ensure each error shows on its own line.
+            error_message = "<br/><br/>".join(errors)
+            askUserDialog(error_message, ['OK'], title='Bulk operation finished with some errors', parent=browser) \
                 .run()
 
     mw.taskman.run_in_background(process, onFinish, args={"nids": ids, "mw": mw})
