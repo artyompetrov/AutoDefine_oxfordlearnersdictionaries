@@ -52,6 +52,11 @@ WORD_NOT_REPLACED_TAG_NAME = "AutoDefine_WordNotReplaced"
 
 AUDIO_FORMAT = "mp3"
 
+SUPPORT_MESSAGE_TEXT = (
+    "Enjoy AutoDefine? Please like and support the project "
+    "(search \"AutoDefine Oxford\" on Google to find the add-on)."
+)
+
 section = '0. test mode'
 TEST_MODE = get_config_value(section, "TEST_MODE", False)
 
@@ -824,11 +829,20 @@ def flush_note(note):
         pass
 
 
+def run_autodefine(editor: Editor):
+    get_data_with_exception_handling(editor)
+    show_support_prompt()
+
+
+def show_support_prompt():
+    tooltip(SUPPORT_MESSAGE_TEXT, period=5000)
+
+
 def setup_buttons(buttons, editor):
     button_kwargs = dict(
         icon=os.path.join(os.path.dirname(__file__), "images", "icon30.png"),
         cmd="AD",
-        func=lambda ed: ed.saveNow(lambda: get_data_with_exception_handling(ed)),
+        func=lambda ed: ed.saveNow(lambda: run_autodefine(ed)),
         tip="AutoDefine Word (%s)" %
             ("no shortcut" if PRIMARY_SHORTCUT == "" else PRIMARY_SHORTCUT),
         toggleable=False,

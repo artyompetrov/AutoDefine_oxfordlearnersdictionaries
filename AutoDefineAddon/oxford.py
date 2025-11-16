@@ -58,6 +58,7 @@ class Word(object):
 
     # remove proxy - disabled by default but may be added to config in future.
     PROXIES = {
+        #todo do not push until commented back
         #'http': 'http://127.0.0.1:8118',
         #'https': 'http://127.0.0.1:8118',
     }
