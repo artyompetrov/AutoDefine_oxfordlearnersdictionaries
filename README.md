@@ -1,5 +1,6 @@
 AutoDefine Oxford Learner's Dictionaries Anki Add-On
 ==========
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/artyompetrov/AutoDefine_oxfordlearnersdictionaries)
 <img align="right" src="AutoDefineAddon/images/icon512.png" width="256" height="256">
 
 An add-on to Anki that auto-defines words, optionally adding images. Visit [ankisrs.net](http://ankisrs.net/) if you're unfamiliar with Anki and spaced repetition systems.
